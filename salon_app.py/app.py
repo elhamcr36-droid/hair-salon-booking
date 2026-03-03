@@ -74,7 +74,7 @@ if menu == "ลงชื่อจองคิว":
 
 elif menu == "ดูข้อมูลการจอง":
 
-    st.subheader("🗑 ลบข้อมูลการจอง")
+    st.subheader("📋 จัดการข้อมูลการจอง")
 
     data = sheet.get_all_values()
 
@@ -86,20 +86,61 @@ elif menu == "ดูข้อมูลการจอง":
         import pandas as pd
         df = pd.DataFrame(rows, columns=headers)
 
-        st.dataframe(df, use_container_width=True)
+        # เพิ่มคอลัมน์เลือก
+        df.insert(0, "เลือก", False)
 
-        # เลือกแถวที่จะลบ
-        row_to_delete = st.number_input(
-            "พิมพ์หมายเลขแถวที่ต้องการลบ (ดูจากลำดับในตาราง เริ่มที่ 1)",
-            min_value=1,
-            max_value=len(rows),
-            step=1
+        edited_df = st.data_editor(
+            df,
+            use_container_width=True,
+            num_rows="fixed"
         )
 
-        if st.button("❌ ลบแถวที่เลือก"):
-            sheet.delete_rows(row_to_delete + 1)  # +1 เพราะแถวแรกคือ header
-            st.success("ลบข้อมูลเรียบร้อยแล้ว ✅")
-            st.rerun()
+        # -------------------
+        # ลบ
+        # -------------------
+        if st.button("🗑 ลบแถวที่เลือก"):
+            rows_to_delete = edited_df[edited_df["เลือก"] == True]
+
+            if not rows_to_delete.empty:
+                for index in sorted(rows_to_delete.index, reverse=True):
+                    sheet.delete_rows(index + 2)
+
+                st.success("ลบข้อมูลเรียบร้อยแล้ว ✅")
+                st.rerun()
+            else:
+                st.warning("กรุณาเลือกแถวที่ต้องการลบ")
+
+        st.divider()
+
+        # -------------------
+        # แก้ไข
+        # -------------------
+        selected_rows = edited_df[edited_df["เลือก"] == True]
+
+        if len(selected_rows) == 1:
+
+            index = selected_rows.index[0]
+            row_data = rows[index]
+
+            st.subheader("✏️ แก้ไขข้อมูล")
+
+            name = st.text_input("ชื่อ", value=row_data[0])
+            phone = st.text_input("เบอร์โทร", value=row_data[1])
+            service = st.text_input("บริการ", value=row_data[2])
+            date = st.text_input("วันที่", value=row_data[3])
+            time = st.text_input("เวลา", value=row_data[4])
+            detail = st.text_input("รายละเอียด", value=row_data[5])
+
+            if st.button("💾 บันทึกการแก้ไข"):
+                sheet.update(
+                    f"A{index+2}:F{index+2}",
+                    [[name, phone, service, date, time, detail]]
+                )
+                st.success("แก้ไขข้อมูลเรียบร้อยแล้ว ✅")
+                st.rerun()
+
+        elif len(selected_rows) > 1:
+            st.warning("เลือกได้ครั้งละ 1 แถวเพื่อแก้ไข")
 
     else:
         st.info("ยังไม่มีข้อมูลการจอง")
