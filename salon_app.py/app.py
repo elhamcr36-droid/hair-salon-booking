@@ -27,7 +27,7 @@ sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 # ตั้งค่าหน้าเว็บ
 # ==========================
 
-st.set_page_config(page_title="ระบบจองคิวร้านทำผม", page_icon="💇‍♀️")
+st.set_page_config(page_title="ระบบจองคิว222Salon", page_icon="💇‍♀️")
 
 st.title("💇‍♀️ ระบบจองคิวร้านทำผม")
 
@@ -144,5 +144,6 @@ elif menu == "ดูข้อมูลการจอง":
 
     else:
         st.info("ยังไม่มีข้อมูลการจอง")
+
 
 
