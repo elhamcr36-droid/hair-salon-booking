@@ -74,7 +74,7 @@ if menu == "ลงชื่อจองคิว":
 
 elif menu == "ดูข้อมูลการจอง":
 
-    st.subheader("📋 จัดการข้อมูลการจอง")
+    st.subheader("🗑 ลบข้อมูลการจอง")
 
     data = sheet.get_all_values()
 
@@ -86,30 +86,22 @@ elif menu == "ดูข้อมูลการจอง":
         import pandas as pd
         df = pd.DataFrame(rows, columns=headers)
 
-        edited_df = st.data_editor(
-            df,
-            num_rows="dynamic",
-            use_container_width=True
+        st.dataframe(df, use_container_width=True)
+
+        # เลือกแถวที่จะลบ
+        row_to_delete = st.number_input(
+            "พิมพ์หมายเลขแถวที่ต้องการลบ (ดูจากลำดับในตาราง เริ่มที่ 1)",
+            min_value=1,
+            max_value=len(rows),
+            step=1
         )
 
-        if st.button("💾 บันทึกการเปลี่ยนแปลง"):
-            sheet.clear()
-            sheet.append_row(headers)
-            for row in edited_df.values.tolist():
-                sheet.append_row(row)
-
-            st.success("อัปเดตข้อมูลเรียบร้อยแล้ว ✅")
+        if st.button("❌ ลบแถวที่เลือก"):
+            sheet.delete_rows(row_to_delete + 1)  # +1 เพราะแถวแรกคือ header
+            st.success("ลบข้อมูลเรียบร้อยแล้ว ✅")
             st.rerun()
 
     else:
         st.info("ยังไม่มีข้อมูลการจอง")
 
-    st.subheader("รายการจองทั้งหมด")
-
-    records = sheet.get_all_records()
-
-    if records:
-        st.dataframe(records)
-    else:
-        st.info("ยังไม่มีข้อมูลการจอง")
 
