@@ -1,116 +1,84 @@
 import streamlit as st
-import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+from datetime import datetime
 
-# -------------------------
-# เชื่อมต่อ Google Sheets
-# -------------------------
+# ==========================
+# ตั้งค่า Google Sheets
+# ==========================
+
+SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
+
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = Credentials.from_service_account_info(
+credentials = Credentials.from_service_account_info(
     st.secrets["gcp_service_account"],
     scopes=scope
 )
 
-client = gspread.authorize(creds)
-sheet = client.open("Hair Salon Booking Data").sheet1
+client = gspread.authorize(credentials)
+sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
-# -------------------------
+
+# ==========================
 # ตั้งค่าหน้าเว็บ
-# -------------------------
-st.set_page_config(page_title="Hair Salon Booking", layout="wide")
+# ==========================
 
-# -------------------------
-# สร้างตัวเก็บข้อมูลชั่วคราว
-# -------------------------
-if 'bookings' not in st.session_state:
-    st.session_state.bookings = []
+st.set_page_config(page_title="ระบบจองคิวร้านทำผม", page_icon="💇‍♀️")
 
-# -------------------------
-# Sidebar
-# -------------------------
-st.sidebar.title("💈 ร้านทำผม")
-page = st.sidebar.radio("เลือกเมนู:", ["ลงชื่อจองคิว", "จัดการข้อมูลคิว"])
+st.title("💇‍♀️ ระบบจองคิวร้านทำผม")
 
-# =========================
-# หน้า 1: ลงชื่อจองคิว
-# =========================
-if page == "ลงชื่อจองคิว":
-    st.header("💇‍♀️ ลงทะเบียนจองคิวใหม่")
+menu = st.sidebar.selectbox(
+    "เมนู",
+    ["ลงชื่อจองคิว", "ดูข้อมูลการจอง"]
+)
 
-    with st.form(key='add_form', clear_on_submit=True):
-        col1, col2 = st.columns(2)
+# ==========================
+# หน้า ลงชื่อจองคิว
+# ==========================
 
-        with col1:
-            name = st.text_input("ชื่อ-นามสกุล")
-            phone = st.text_input("เบอร์โทรศัพท์")
+if menu == "ลงชื่อจองคิว":
 
-        with col2:
-            service = st.selectbox(
-                "เลือกบริการ",
-                ["ตัดผม", "สระ-ไดร์", "ทำสีผม", "ยืดผม/ดัดผม"]
-            )
-            date = st.date_input("เลือกวันที่")
-            time = st.time_input("เลือกเวลา")
+    st.subheader("กรอกข้อมูลเพื่อจองคิว")
 
-        note = st.text_area("รายละเอียดเพิ่มเติม")
-        submit = st.form_submit_button("✅ ยืนยันการจอง")
+    name = st.text_input("ชื่อ")
+    phone = st.text_input("เบอร์โทร")
+    service = st.selectbox("บริการ", ["ตัดผม", "สระผม", "ทำสี", "ดัดผม"])
+    date = st.date_input("วันที่")
+    time = st.time_input("เวลา")
+    detail = st.text_area("รายละเอียดเพิ่มเติม")
 
-        if submit:
-            if name and phone:
-                new_data = {
-                    "ชื่อ": name,
-                    "เบอร์โทร": phone,
-                    "บริการ": service,
-                    "วันที่": str(date),
-                    "เวลา": str(time),
-                    "หมายเหตุ": note
-                }
+    if st.button("✅ ยืนยันการจอง"):
 
-                # บันทึกใน session
-                st.session_state.bookings.append(new_data)
+        if name and phone:
+            sheet.append_row([
+                name,
+                phone,
+                service,
+                str(date),
+                str(time),
+                detail,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ])
 
-                # ✅ บันทึกลง Google Sheets
-                sheet.append_row([
-                    name,
-                    phone,
-                    service,
-                    str(date),
-                    str(time),
-                    note
-                ])
+            st.success("บันทึกการจองเรียบร้อยแล้ว ✅")
+        else:
+            st.error("กรุณากรอกชื่อและเบอร์โทร")
 
-                st.success(f"บันทึกคิวคุณ {name} เรียบร้อยแล้ว! 🎉")
-            else:
-                st.warning("กรุณากรอกชื่อและเบอร์โทรให้ครบถ้วน")
+# ==========================
+# หน้า ดูข้อมูลการจอง
+# ==========================
 
-# =========================
-# หน้า 2: จัดการข้อมูล
-# =========================
-elif page == "จัดการข้อมูลคิว":
-    st.header("📋 จัดการคิวลูกค้า")
+elif menu == "ดูข้อมูลการจอง":
 
-    if not st.session_state.bookings:
-        st.info("ยังไม่มีข้อมูลการจอง")
+    st.subheader("รายการจองทั้งหมด")
+
+    records = sheet.get_all_records()
+
+    if records:
+        st.dataframe(records)
     else:
-        df = pd.DataFrame(st.session_state.bookings)
-
-        edited_df = st.data_editor(
-            df,
-            num_rows="dynamic",
-            use_container_width=True,
-            column_config={
-                "บริการ": st.column_config.SelectboxColumn(
-                    options=["ตัดผม", "สระ-ไดร์", "ทำสีผม", "ยืดผม/ดัดผม"]
-                )
-            }
-        )
-
-        if st.button("💾 บันทึกการเปลี่ยนแปลงทั้งหมด"):
-            st.session_state.bookings = edited_df.to_dict('records')
-            st.success("อัปเดตข้อมูลในระบบเรียบร้อยแล้ว!")
-            st.rerun()
+        st.info("ยังไม่มีข้อมูลการจอง")
