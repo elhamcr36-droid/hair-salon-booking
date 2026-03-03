@@ -74,6 +74,36 @@ if menu == "ลงชื่อจองคิว":
 
 elif menu == "ดูข้อมูลการจอง":
 
+    st.subheader("📋 จัดการข้อมูลการจอง")
+
+    data = sheet.get_all_values()
+
+    if len(data) > 1:
+
+        headers = data[0]
+        rows = data[1:]
+
+        import pandas as pd
+        df = pd.DataFrame(rows, columns=headers)
+
+        edited_df = st.data_editor(
+            df,
+            num_rows="dynamic",
+            use_container_width=True
+        )
+
+        if st.button("💾 บันทึกการเปลี่ยนแปลง"):
+            sheet.clear()
+            sheet.append_row(headers)
+            for row in edited_df.values.tolist():
+                sheet.append_row(row)
+
+            st.success("อัปเดตข้อมูลเรียบร้อยแล้ว ✅")
+            st.rerun()
+
+    else:
+        st.info("ยังไม่มีข้อมูลการจอง")
+
     st.subheader("รายการจองทั้งหมด")
 
     records = sheet.get_all_records()
@@ -82,3 +112,4 @@ elif menu == "ดูข้อมูลการจอง":
         st.dataframe(records)
     else:
         st.info("ยังไม่มีข้อมูลการจอง")
+
