@@ -7,7 +7,7 @@ import pandas as pd
 # ==========================
 # ตั้งค่า Google Sheets
 # ==========================
-SPREADSHEET_ID = "ใส่_spreadsheet_id_ของคุณ"
+SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
 
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -26,7 +26,7 @@ sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 # ตั้งค่าหน้าเว็บ
 # ==========================
 st.set_page_config(page_title="ระบบจองคิวร้านทำผม", page_icon="💇‍♀️")
-st.title("💇‍♀️ ระบบจองคิวร้านทำผม")
+st.title("💇‍♀️ 222Salon")
 
 menu = st.sidebar.selectbox(
     "เมนู",
@@ -171,3 +171,4 @@ elif menu == "รายงานสรุป":
 
     else:
         st.info("ยังไม่มีข้อมูลให้สรุป")
+
