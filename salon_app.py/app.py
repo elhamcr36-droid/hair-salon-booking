@@ -146,29 +146,5 @@ elif menu == "จัดการข้อมูลการจอง":
     else:
         st.info("ยังไม่มีข้อมูล")
 
-# ==========================
-# หน้า รายงานสรุป
-# ==========================
-elif menu == "รายงานสรุป":
 
-    st.subheader("📊 รายงานสรุป")
-
-    df = get_data()
-
-    if not df.empty:
-
-        df["วันที่"] = pd.to_datetime(df["วันที่"])
-
-        # รายวัน
-        st.markdown("### 📅 สรุปรายวัน")
-        daily = df.groupby(df["วันที่"].dt.date).size()
-        st.dataframe(daily)
-
-        # รายเดือน
-        st.markdown("### 📆 สรุปรายเดือน")
-        monthly = df.groupby(df["วันที่"].dt.to_period("M")).size()
-        st.dataframe(monthly)
-
-    else:
-        st.info("ยังไม่มีข้อมูลให้สรุป")
 
