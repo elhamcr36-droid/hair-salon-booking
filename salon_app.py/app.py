@@ -133,7 +133,7 @@ elif menu == "จัดการข้อมูลการจอง":
             new_service = st.text_input("บริการ", row["บริการ"])
             new_date = st.text_input("วันที่", row["วันที่"])
             new_time = st.text_input("เวลา", row["เวลา"])
-            new_detail = st.text_input("รายละเอียด", row["รายละเอียดเพิ่มเติม"])
+            new_detail = st.text_input("รายละเอียด", row["รายละเอียด"])
 
             if st.button("💾 บันทึกการแก้ไข"):
                 sheet.update(
@@ -145,6 +145,7 @@ elif menu == "จัดการข้อมูลการจอง":
 
     else:
         st.info("ยังไม่มีข้อมูล")
+
 
 
 
