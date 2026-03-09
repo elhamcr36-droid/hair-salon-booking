@@ -26,119 +26,87 @@ spreadsheet = client.open_by_key(SPREADSHEET_ID)
 booking_sheet = spreadsheet.worksheet("bookings")
 users_sheet = spreadsheet.worksheet("users")
 
-st.set_page_config(page_title="222 Salon", page_icon="💇‍♀️")
+st.set_page_config(page_title="222 Salon",page_icon="💇‍♀️")
 
 # ---------------- FUNCTIONS ----------------
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-
 def get_users():
 
-    data = users_sheet.get_all_values()
+    data=users_sheet.get_all_values()
 
     if not data:
         return pd.DataFrame(columns=["username","password"])
 
-    headers = data[0]
+    headers=data[0]
 
-    if len(data) == 1:
+    if len(data)==1:
         return pd.DataFrame(columns=headers)
 
-    df = pd.DataFrame(data[1:], columns=headers)
-    return df
-
+    return pd.DataFrame(data[1:],columns=headers)
 
 def get_bookings():
 
-    data = booking_sheet.get_all_values()
+    data=booking_sheet.get_all_values()
 
     if not data:
         return pd.DataFrame()
 
-    headers = data[0]
+    headers=data[0]
 
-    if len(data) == 1:
+    if len(data)==1:
         return pd.DataFrame(columns=headers)
 
-    df = pd.DataFrame(data[1:], columns=headers)
-    return df
+    return pd.DataFrame(data[1:],columns=headers)
 
+# -------- TIME SLOT --------
 
 def generate_times():
 
-    times = []
+    times=[]
 
-    start = datetime.strptime("08:30","%H:%M")
-    end = datetime.strptime("17:30","%H:%M")
+    start=datetime.strptime("08:30","%H:%M")
+    end=datetime.strptime("17:30","%H:%M")
 
-    current = start
+    current=start
 
-    while current <= end:
+    while current<=end:
 
         times.append(current.strftime("%H:%M"))
-
-        current += timedelta(minutes=30)
+        current+=timedelta(minutes=30)
 
     return times
 
-
 def get_available_times(date):
 
-    df = get_bookings()
+    df=get_bookings()
 
-    all_times = generate_times()
+    all_times=generate_times()
 
     if df.empty:
         return all_times
 
-    day = df[df["วันที่"] == str(date)]
+    day=df[df["วันที่"]==str(date)]
 
-    booked = day["เวลา"].tolist()
+    booked=day["เวลา"].tolist()
 
-    available = [t for t in all_times if t not in booked]
-
-    return available
-
-
-# -------- CHECK DUPLICATE (กันจองซ้ำ) --------
-
-def check_duplicate(date,time):
-
-    df = get_bookings()
-
-    if df.empty:
-        return False
-
-    duplicate = df[
-        (df["วันที่"] == str(date)) &
-        (df["เวลา"] == time)
-    ]
-
-    if len(duplicate) > 0:
-        return True
-
-    return False
-
+    return [t for t in all_times if t not in booked]
 
 # ---------------- SESSION ----------------
 
 if "login" not in st.session_state:
-    st.session_state.login = False
+    st.session_state.login=False
 
-if "go_booking" not in st.session_state:
-    st.session_state.go_booking = False
-
-
-# ---------------- LOGIN ----------------
+# ---------------- LOGIN PAGE ----------------
 
 if not st.session_state.login:
 
-    st.title("💇‍♀️ 222 Salon")
+    st.title("💇‍♀️ 222 Salon Booking")
 
-    username = st.text_input("Username")
-    password = st.text_input("Password",type="password")
+    username=st.text_input("Username")
+    password=st.text_input("Password",type="password")
 
     if st.button("เข้าสู่ระบบ"):
 
@@ -155,9 +123,7 @@ if not st.session_state.login:
 
         if not user.empty:
 
-            stored=user.iloc[0]["password"]
-
-            if stored==hash_password(password):
+            if user.iloc[0]["password"]==hash_password(password):
 
                 st.session_state.login=True
                 st.session_state.role="customer"
@@ -169,7 +135,6 @@ if not st.session_state.login:
 
         else:
             st.error("ไม่พบผู้ใช้")
-
 
     st.divider()
 
@@ -189,12 +154,11 @@ if not st.session_state.login:
         else:
 
             users_sheet.append_row([
-            new_user,
-            hash_password(new_pass)
+                new_user,
+                hash_password(new_pass)
             ])
 
             st.success("สมัครสมาชิกสำเร็จ")
-
 
 # ---------------- AFTER LOGIN ----------------
 
@@ -209,7 +173,6 @@ else:
 
     df=get_bookings()
 
-
 # ---------------- CUSTOMER ----------------
 
     if role=="customer":
@@ -221,47 +184,81 @@ else:
         "คิววันนี้"
         ])
 
-
 # ---------------- SERVICE MENU ----------------
 
         with tab1:
 
             st.title("💇‍♀️ เมนูบริการ Salon")
+            st.caption("ราคาเป็นราคาเริ่มต้น อาจเปลี่ยนตามความยาวและสภาพผม")
+
+            st.subheader("👨 บริการผู้ชาย")
 
             col1,col2,col3=st.columns(3)
 
             with col1:
                 with st.container(border=True):
-
-                    st.markdown("## ✂️ ตัดผม")
-                    st.markdown("### 💰 120 บาท")
-
-                    if st.button("จองคิวทันที",key="cut"):
-                        st.session_state.go_booking=True
-                        st.rerun()
-
+                    st.markdown("### ✂️ ตัดผมชาย")
+                    st.markdown("## 💰 เริ่มต้น 100 บาท")
 
             with col2:
                 with st.container(border=True):
-
-                    st.markdown("## 🧴 สระ + ไดร์")
-                    st.markdown("### 💰 80 บาท")
-
-                    if st.button("จองคิวทันที",key="wash"):
-                        st.session_state.go_booking=True
-                        st.rerun()
-
+                    st.markdown("### 🧴 สระผมชาย")
+                    st.markdown("## 💰 เริ่มต้น 60 บาท")
 
             with col3:
                 with st.container(border=True):
+                    st.markdown("### 🎨 ทำสีผมชาย")
+                    st.markdown("## 💰 เริ่มต้น 400 บาท")
 
-                    st.markdown("## 🎨 ทำสีผม")
-                    st.markdown("### 💰 600 บาท")
+            col4,col5=st.columns(2)
 
-                    if st.button("จองคิวทันที",key="color"):
-                        st.session_state.go_booking=True
-                        st.rerun()
+            with col4:
+                with st.container(border=True):
+                    st.markdown("### 🌀 ดัดผมชาย")
+                    st.markdown("## 💰 เริ่มต้น 600 บาท")
 
+            with col5:
+                with st.container(border=True):
+                    st.markdown("### 💆‍♂️ ทรีทเมนต์ผม")
+                    st.markdown("## 💰 เริ่มต้น 200 บาท")
+
+            st.divider()
+
+            st.subheader("👩 บริการผู้หญิง")
+
+            col1,col2,col3=st.columns(3)
+
+            with col1:
+                with st.container(border=True):
+                    st.markdown("### ✂️ ตัดผมหญิง")
+                    st.markdown("## 💰 เริ่มต้น 150 บาท")
+
+            with col2:
+                with st.container(border=True):
+                    st.markdown("### 🧴 สระ + ไดร์")
+                    st.markdown("## 💰 เริ่มต้น 120 บาท")
+
+            with col3:
+                with st.container(border=True):
+                    st.markdown("### 🎨 ทำสีผม")
+                    st.markdown("## 💰 เริ่มต้น 700 บาท")
+
+            col4,col5,col6=st.columns(3)
+
+            with col4:
+                with st.container(border=True):
+                    st.markdown("### 🌀 ดัดผม")
+                    st.markdown("## 💰 เริ่มต้น 1200 บาท")
+
+            with col5:
+                with st.container(border=True):
+                    st.markdown("### 💁‍♀️ ยืดผม")
+                    st.markdown("## 💰 เริ่มต้น 1200 บาท")
+
+            with col6:
+                with st.container(border=True):
+                    st.markdown("### 💆‍♀️ ทรีทเมนต์ผม")
+                    st.markdown("## 💰 เริ่มต้น 300 บาท")
 
 # ---------------- BOOKING ----------------
 
@@ -272,10 +269,14 @@ else:
             name=st.text_input("ชื่อ")
             phone=st.text_input("เบอร์โทร")
 
-            service=st.selectbox(
-            "บริการ",
-            ["ตัดผม","สระผม","ทำสี","ดัดผม"]
-            )
+            service=st.selectbox("บริการ",[
+            "ตัดผม",
+            "สระผม",
+            "ทำสี",
+            "ดัดผม",
+            "ยืดผม",
+            "ทรีทเมนต์"
+            ])
 
             date=st.date_input("วันที่")
 
@@ -283,22 +284,25 @@ else:
 
             if available:
 
-                booking_time=st.selectbox(
-                "เวลาที่ว่าง",
-                available
-                )
+                booking_time=st.selectbox("เวลาที่ว่าง",available)
 
             else:
 
                 st.error("วันนี้เต็มแล้ว")
                 st.stop()
 
-
             detail=st.text_area("รายละเอียด")
 
             if st.button("ยืนยันการจอง"):
 
-                if check_duplicate(date,booking_time):
+                latest=get_bookings()
+
+                duplicate=latest[
+                (latest["วันที่"]==str(date)) &
+                (latest["เวลา"]==booking_time)
+                ]
+
+                if len(duplicate)>0:
 
                     st.error("❌ เวลานี้มีคนจองแล้ว")
                     st.stop()
@@ -319,7 +323,6 @@ else:
                 st.success("✅ จองคิวสำเร็จ")
                 st.rerun()
 
-
 # ---------------- MY BOOKINGS ----------------
 
         with tab3:
@@ -335,7 +338,6 @@ else:
             else:
 
                 st.info("ยังไม่มีการจอง")
-
 
 # ---------------- TODAY ----------------
 
@@ -355,13 +357,11 @@ else:
 
                 st.info("วันนี้ยังไม่มีคิว")
 
-
 # ---------------- ADMIN ----------------
 
     if role=="admin":
 
         tab1,tab2=st.tabs(["Dashboard","จัดการการจอง"])
-
 
         with tab1:
 
@@ -380,7 +380,6 @@ else:
 
             st.dataframe(df)
 
-
         with tab2:
 
             if not df.empty:
@@ -390,11 +389,9 @@ else:
                 if st.button("บันทึก"):
 
                     booking_sheet.clear()
-
                     booking_sheet.append_row(list(df.columns))
 
                     for i,row in edited.iterrows():
-
                         booking_sheet.append_row(row.tolist())
 
                     st.success("บันทึกสำเร็จ")
