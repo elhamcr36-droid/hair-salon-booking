@@ -7,7 +7,7 @@ import hashlib
 
 # ---------------- CONFIG ----------------
 
-SPREADSHEET_ID = "ใส่_SPREADSHEET_ID_ของคุณ"
+SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
 
 # ---------------- GOOGLE SHEET CONNECT ----------------
 
@@ -229,3 +229,4 @@ else:
 
     else:
         register()
+
