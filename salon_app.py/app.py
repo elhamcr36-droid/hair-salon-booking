@@ -8,263 +8,152 @@ import plotly.express as px
 
 # ---------------- CONFIG ----------------
 
-SPREADSHEET_ID = "YOUR_SPREADSHEET_ID"
+SPREADSHEET_ID = "ใส่_ID_GoogleSheet"
 
 scope = [
 "https://www.googleapis.com/auth/spreadsheets",
 "https://www.googleapis.com/auth/drive"
 ]
 
-creds = Credentials.from_service_account_file(
-"credentials.json",
+creds = Credentials.from_service_account_info(
+st.secrets["gcp_service_account"],
 scopes=scope
 )
 
 client = gspread.authorize(creds)
+sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
-sheet_users = client.open_by_key(SPREADSHEET_ID).worksheet("users")
-sheet_booking = client.open_by_key(SPREADSHEET_ID).worksheet("booking")
+# ---------------- PAGE ----------------
 
-# ---------------- FUNCTIONS ----------------
+st.set_page_config(page_title="Hair Salon Booking", layout="wide")
 
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+st.title("💈 ระบบจองคิวร้านทำผม")
 
-def get_users():
-    data = sheet_users.get_all_records()
-    return pd.DataFrame(data)
-
-def get_bookings():
-    data = sheet_booking.get_all_records()
-    return pd.DataFrame(data)
-
-def add_user(username,password):
-    sheet_users.append_row([
-        username,
-        hash_password(password)
-    ])
-
-def add_booking(name,service,date,time,price):
-
-    df = get_bookings()
-
-    queue = len(df) + 1
-
-    sheet_booking.append_row([
-        queue,
-        name,
-        service,
-        date,
-        time,
-        price
-    ])
-
-# ---------------- MENU SERVICES ----------------
+# ---------------- SERVICE MENU ----------------
 
 services = {
-"ตัดผมชาย":150,
-"ตัดผมหญิง":250,
-"ไดร์ผม":120,
-"สระผม":100,
-"โกนหนวด":80,
-"ทำสีผม":900,
-"ไฮไลท์":1200,
-"ยืดผม":1500,
-"ดัดผม":1500,
-"ทรีทเมนต์":500,
-"บำรุงผม":350,
+"ตัดผมชาย":120,
+"ตัดผมหญิง":200,
+"ตัดผมเด็ก":100,
+"สระผม":80,
+"ไดร์ผม":80,
+"โกนหนวด":60,
+"ซอยผม":150,
+"เซ็ตผม":120,
+"ดัดผม":800,
+"ยืดผม":1200,
+"ทำสีผม":1000,
+"ฟอกสีผม":1200,
+"ทรีทเม้นท์":500,
+"สปาผม":400,
 "อบไอน้ำ":300,
-"สปาผม":600,
-"ตัดหน้าม้า":100,
-"ซอยผม":180,
-"ซอยผมสไลด์":220,
-"ยืดโคนดัดปลาย":1800,
-"ทำสีแฟชั่น":2000,
-"ทำสีเทา":2200,
-"ทำสีบลอนด์":2400,
-"เคลือบเงาผม":400,
-"บำรุงเคราติน":1800,
-"เคราตินสด":2500,
-"ดัดวอลลุ่ม":2000,
-"ยืดวอลลุ่ม":2000,
-"ถักเปีย":300,
-"ต่อผม":3000,
-"ถอดผมต่อ":1000
+"ต่อผม":2000,
+"ตัดหน้าม้า":50,
+"สระ+ไดร์":150,
+"ตัด+สระ":200,
+"ตัด+สระ+เซ็ต":250
 }
 
-# ---------------- SESSION ----------------
+# ---------------- LOAD DATA ----------------
 
-if "user" not in st.session_state:
-    st.session_state.user = None
+def load_data():
+    data = sheet.get_all_records()
+    return pd.DataFrame(data)
 
-# ---------------- LOGIN ----------------
-
-if st.session_state.user is None:
-
-    st.title("💇‍♂️ ระบบจองคิวร้านทำผม")
-
-    menu = st.selectbox(
-    "เมนู",
-    ["Login","Register"]
-    )
-
-    username = st.text_input("Username")
-    password = st.text_input("Password",type="password")
-
-    if menu == "Login":
-
-        if st.button("Login"):
-
-            users = get_users()
-
-            if username in users["username"].values:
-
-                pw = users.loc[
-                users["username"]==username,
-                "password"
-                ].values[0]
-
-                if pw == hash_password(password):
-
-                    st.session_state.user = username
-                    st.rerun()
-
-                else:
-                    st.error("Password incorrect")
-
-            else:
-                st.error("User not found")
-
-    if menu == "Register":
-
-        if st.button("Register"):
-            add_user(username,password)
-            st.success("Register success")
-
-# ---------------- MAIN APP ----------------
-
-else:
-
-    st.sidebar.title("เมนู")
-
-    menu = st.sidebar.radio(
-    "เลือกเมนู",
-    [
-    "จองคิว",
-    "ตารางคิว",
-    "สถิติร้าน",
-    "แผนที่ร้าน",
-    "Logout"
-    ]
-    )
+df = load_data()
 
 # ---------------- BOOKING ----------------
 
-    if menu == "จองคิว":
+st.header("📅 จองคิว")
 
-        st.title("📅 จองคิวร้านทำผม")
+name = st.text_input("ชื่อลูกค้า")
 
-        name = st.text_input("ชื่อลูกค้า")
+service = st.selectbox("บริการ", list(services.keys()))
 
-        service = st.selectbox(
-        "เลือกบริการ",
-        list(services.keys())
-        )
+date = st.date_input("วันที่")
 
-        date = st.date_input("วันที่")
+time = st.selectbox("เวลา",[
+"10:00",
+"10:30",
+"11:00",
+"11:30",
+"12:00",
+"12:30",
+"13:00",
+"13:30",
+"14:00",
+"14:30",
+"15:00",
+"15:30",
+"16:00",
+"16:30",
+"17:00",
+"17:30",
+"18:00"
+])
 
-        time = st.selectbox(
-        "เวลา",
-        [
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00",
-        "18:00"
-        ]
-        )
+if st.button("จองคิว"):
 
-        price = services[service]
+    queue = len(df)+1
+    price = services[service]
 
-        st.write("ราคา:",price,"บาท")
+    sheet.append_row([
+        queue,
+        name,
+        service,
+        price,
+        str(date),
+        time,
+        datetime.now().strftime("%Y-%m-%d %H:%M")
+    ])
 
-        if st.button("ยืนยันการจอง"):
-
-            add_booking(
-            name,
-            service,
-            str(date),
-            time,
-            price
-            )
-
-            st.success("จองคิวสำเร็จ")
+    st.success(f"จองสำเร็จ เลขคิวของคุณคือ {queue}")
 
 # ---------------- QUEUE TABLE ----------------
 
-    elif menu == "ตารางคิว":
+st.header("📋 คิววันนี้")
 
-        st.title("📋 ตารางคิวลูกค้า")
+if not df.empty:
+    today = str(datetime.today().date())
 
-        df = get_bookings()
+    today_df = df[df["date"]==today]
 
-        st.dataframe(df)
+    st.dataframe(today_df)
 
-# ---------------- STATS ----------------
+# ---------------- POPULAR SERVICE ----------------
 
-    elif menu == "สถิติร้าน":
+st.header("⭐ บริการยอดนิยม")
 
-        st.title("📊 สถิติร้าน")
+if not df.empty:
 
-        df = get_bookings()
+    pop = df["service"].value_counts().reset_index()
+    pop.columns=["service","count"]
 
-        if len(df) > 0:
+    fig = px.bar(pop,x="service",y="count")
 
-            total = df["price"].sum()
+    st.plotly_chart(fig,use_container_width=True)
 
-            st.metric(
-            "รายได้รวม",
-            f"{total} บาท"
-            )
+# ---------------- REVENUE ----------------
 
-            fig = px.bar(
-            df,
-            x="service",
-            title="บริการยอดนิยม"
-            )
+st.header("📊 รายได้")
 
-            st.plotly_chart(fig)
+if not df.empty:
 
-            fig2 = px.pie(
-            df,
-            names="service",
-            title="สัดส่วนบริการ"
-            )
+    revenue = df.groupby("date")["price"].sum().reset_index()
 
-            st.plotly_chart(fig2)
+    fig2 = px.line(revenue,x="date",y="price")
+
+    st.plotly_chart(fig2,use_container_width=True)
 
 # ---------------- MAP ----------------
 
-    elif menu == "แผนที่ร้าน":
+st.header("📍 แผนที่ร้าน")
 
-        st.title("📍 ที่ตั้งร้าน")
+map_data = pd.DataFrame({
+"lat":[7.0086],
+"lon":[100.4747]
+})
 
-        st.map(
-        pd.DataFrame({
-        "lat":[7.0084],
-        "lon":[100.4747]
-        })
-        )
+st.map(map_data)
 
-        st.write("📍 พิกัดร้าน: 7.0084 , 100.4747")
-
-# ---------------- LOGOUT ----------------
-
-    elif menu == "Logout":
-
-        st.session_state.user = None
-        st.rerun()
+st.info("📍 ร้านอยู่หาดใหญ่")
