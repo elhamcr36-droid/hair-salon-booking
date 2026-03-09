@@ -220,11 +220,12 @@ else:
 
     if role=="customer":
 
-        tab1,tab2,tab3,tab4=st.tabs([
+        tab1,tab2,tab3,tab4,tab5=st.tabs([
         "เมนูบริการ",
         "จองคิว",
         "คิวของฉัน",
-        "คิววันนี้"
+        "คิววันนี้",
+        "แผนที่ร้าน"
         ])
 
 # -------- SERVICE MENU --------
@@ -233,27 +234,14 @@ else:
 
             st.title("💇‍♀️ เมนูบริการ")
 
-            st.markdown("### 👨 ผู้ชาย")
-            st.write("✂️ ตัดผมชาย – 120 บาท")
-            st.write("🧴 สระผมชาย – 80 บาท")
-            st.write("🪒 โกนหนวด – 80 บาท")
-            st.write("💆 นวดศีรษะ – 150 บาท")
-            st.write("🎨 ทำสีผมชาย – 500 บาท")
-            st.write("🧔 เซ็ตผม – 100 บาท")
-
-            st.markdown("### 👩 ผู้หญิง")
-            st.write("✂️ ตัดผมหญิง – 150 บาท")
-            st.write("🧴 สระ + ไดร์ – 120 บาท")
-            st.write("🎨 ทำสี – 700 บาท")
-            st.write("🌀 ดัดผม – 1200 บาท")
-            st.write("💁‍♀️ ยืดผม – 1200 บาท")
-            st.write("💆‍♀️ ทรีทเมนต์ – 300 บาท")
-            st.write("✨ เคราติน – 1500 บาท")
-            st.write("💇‍♀️ ซอยผม – 200 บาท")
-            st.write("🎀 เซ็ตผมออกงาน – 500 บาท")
-
-            st.markdown("### 👧 เด็ก")
-            st.write("✂️ ตัดผมเด็ก – 100 บาท")
+            st.write("✂️ ตัดผมชาย – 120")
+            st.write("✂️ ตัดผมหญิง – 150")
+            st.write("✂️ ตัดผมเด็ก – 100")
+            st.write("🧴 สระ + ไดร์ – 120")
+            st.write("🎨 ทำสี – 700")
+            st.write("🌀 ดัดผม – 1200")
+            st.write("💁‍♀️ ยืดผม – 1200")
+            st.write("💆‍♀️ ทรีทเมนต์ – 300")
 
 # -------- BOOKING --------
 
@@ -266,51 +254,24 @@ else:
 
             service=st.selectbox("บริการ",[
             "ตัดผมชาย",
-            "สระผมชาย",
-            "โกนหนวด",
-            "นวดศีรษะ",
-            "ทำสีผมชาย",
-            "เซ็ตผม",
             "ตัดผมหญิง",
+            "ตัดผมเด็ก",
             "สระ + ไดร์",
             "ทำสี",
             "ดัดผม",
             "ยืดผม",
-            "ทรีทเมนต์",
-            "เคราติน",
-            "ซอยผม",
-            "เซ็ตผมออกงาน",
-            "ตัดผมเด็ก"
+            "ทรีทเมนต์"
             ])
 
             date=st.date_input("วันที่")
 
-            if date < datetime.today().date():
-                st.error("ไม่สามารถจองย้อนหลังได้")
-                st.stop()
-
             available=get_available_times(date)
 
-            if available:
-                booking_time=st.selectbox("เวลาที่ว่าง",available)
-            else:
-                st.error("วันนี้เต็มแล้ว")
-                st.stop()
+            booking_time=st.selectbox("เวลา",available)
 
             detail=st.text_area("รายละเอียด")
 
             if st.button("ยืนยันการจอง"):
-
-                latest=get_bookings()
-
-                duplicate=latest[
-                (latest["วันที่"]==str(date)) &
-                (latest["เวลา"]==booking_time)
-                ]
-
-                if len(duplicate)>0:
-                    st.error("❌ เวลานี้มีคนจองแล้ว")
-                    st.stop()
 
                 queue=generate_queue(date)
 
@@ -326,21 +287,16 @@ else:
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 ])
 
-                st.success(f"✅ จองคิวสำเร็จ คิวที่ {queue}")
+                st.success(f"จองสำเร็จ คิวที่ {queue}")
                 st.rerun()
 
 # -------- MY BOOKINGS --------
 
         with tab3:
 
-            st.subheader("คิวของฉัน")
-
             my=df[df["username"]==username]
 
-            if not my.empty:
-                st.dataframe(my)
-            else:
-                st.info("ยังไม่มีการจอง")
+            st.dataframe(my)
 
 # -------- TODAY --------
 
@@ -350,55 +306,59 @@ else:
 
             today_df=df[df["วันที่"]==today]
 
-            st.subheader("คิววันนี้")
+            st.dataframe(today_df)
 
-            if not today_df.empty:
-                st.dataframe(today_df)
-            else:
-                st.info("วันนี้ยังไม่มีคิว")
+# -------- MAP + GPS --------
+
+        with tab5:
+
+            st.title("📍 พิกัดร้าน 222 Salon")
+
+            shop_lat=7.0086
+            shop_lon=100.4747
+
+            map_data=pd.DataFrame({
+            "lat":[shop_lat],
+            "lon":[shop_lon]
+            })
+
+            st.map(map_data)
+
+            st.subheader("นำทางไปที่ร้าน")
+
+            maps_url=f"https://www.google.com/maps?q={shop_lat},{shop_lon}"
+
+            st.markdown(f"[🧭 เปิด Google Maps]({maps_url})")
 
 # ---------------- ADMIN ----------------
 
     if role=="admin":
 
-        tab1,tab2=st.tabs(["Dashboard","จัดการการจอง"])
+        tab1,tab2=st.tabs(["Dashboard","จัดการคิว"])
 
         with tab1:
 
             st.title("Admin Dashboard")
 
-            users=get_users()
-            customers=users[users["username"]!="admin222"]
-
-            col1,col2,col3=st.columns(3)
+            col1,col2=st.columns(2)
 
             col1.metric("การจองทั้งหมด",len(df))
-            col2.metric("ลูกค้า",len(customers))
 
             today=datetime.today().strftime("%Y-%m-%d")
+
             today_df=df[df["วันที่"]==today]
 
-            col3.metric("คิววันนี้",len(today_df))
-
-            st.divider()
+            col2.metric("คิววันนี้",len(today_df))
 
             prices={
             "ตัดผมชาย":120,
-            "สระผมชาย":80,
-            "โกนหนวด":80,
-            "นวดศีรษะ":150,
-            "ทำสีผมชาย":500,
-            "เซ็ตผม":100,
             "ตัดผมหญิง":150,
+            "ตัดผมเด็ก":100,
             "สระ + ไดร์":120,
             "ทำสี":700,
             "ดัดผม":1200,
             "ยืดผม":1200,
-            "ทรีทเมนต์":300,
-            "เคราติน":1500,
-            "ซอยผม":200,
-            "เซ็ตผมออกงาน":500,
-            "ตัดผมเด็ก":100
+            "ทรีทเมนต์":300
             }
 
             if not df.empty:
@@ -411,29 +371,16 @@ else:
                 revenue,
                 x="วันที่",
                 y="ราคา",
-                title="📊 รายได้รายวัน"
+                title="รายได้รายวัน"
                 )
 
                 st.plotly_chart(fig)
-
-                st.subheader("⭐ บริการยอดนิยม")
-
-                popular=df["บริการ"].value_counts().reset_index()
-                popular.columns=["บริการ","จำนวน"]
-
-                st.dataframe(popular)
-
-                st.subheader("📅 ปฏิทินคิว")
-
-                calendar=df.groupby("วันที่").size().reset_index(name="จำนวนคิว")
-
-                st.dataframe(calendar)
 
         with tab2:
 
             if not df.empty:
 
-                edited=st.data_editor(df,num_rows="dynamic")
+                edited=st.data_editor(df)
 
                 if st.button("บันทึก"):
 
@@ -444,6 +391,3 @@ else:
                         booking_sheet.append_row(row.tolist())
 
                     st.success("บันทึกสำเร็จ")
-
-            else:
-                st.info("ยังไม่มีข้อมูล")
