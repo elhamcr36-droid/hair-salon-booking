@@ -4,6 +4,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, timedelta
 import hashlib
+import plotly.express as px
 
 # ---------------- CONFIG ----------------
 
@@ -28,6 +29,22 @@ users_sheet = spreadsheet.worksheet("users")
 
 st.set_page_config(page_title="222 Salon",page_icon="💇‍♀️")
 
+# ---------------- UI STYLE ----------------
+
+st.markdown("""
+<style>
+.stApp{
+background-color:#0f172a;
+color:white;
+}
+div[data-testid="metric-container"]{
+background-color:#1e293b;
+padding:20px;
+border-radius:10px;
+}
+</style>
+""",unsafe_allow_html=True)
+
 # ---------------- FUNCTIONS ----------------
 
 def hash_password(password):
@@ -35,7 +52,7 @@ def hash_password(password):
 
 def get_users():
 
-    data=users_sheet.get_all_values()
+    data = users_sheet.get_all_values()
 
     if not data:
         return pd.DataFrame(columns=["username","password"])
@@ -94,12 +111,28 @@ def get_available_times(date):
 
     return [t for t in all_times if t not in booked]
 
+# -------- QUEUE --------
+
+def generate_queue(date):
+
+    df=get_bookings()
+
+    if df.empty:
+        return 1
+
+    day=df[df["วันที่"]==str(date)]
+
+    if day.empty:
+        return 1
+
+    return len(day)+1
+
 # ---------------- SESSION ----------------
 
 if "login" not in st.session_state:
     st.session_state.login=False
 
-# ---------------- LOGIN PAGE ----------------
+# ---------------- LOGIN ----------------
 
 if not st.session_state.login:
 
@@ -154,8 +187,8 @@ if not st.session_state.login:
         else:
 
             users_sheet.append_row([
-                new_user,
-                hash_password(new_pass)
+            new_user,
+            hash_password(new_pass)
             ])
 
             st.success("สมัครสมาชิกสำเร็จ")
@@ -184,83 +217,26 @@ else:
         "คิววันนี้"
         ])
 
-# ---------------- SERVICE MENU ----------------
+# -------- SERVICE MENU --------
 
         with tab1:
 
-            st.title("💇‍♀️ เมนูบริการ Salon")
-            st.caption("ราคาเป็นราคาเริ่มต้น อาจเปลี่ยนตามความยาวและสภาพผม")
+            st.title("💇‍♀️ เมนูบริการ")
 
-            st.subheader("👨 บริการผู้ชาย")
+            st.markdown("### 👨 ผู้ชาย")
+            st.write("✂️ ตัดผมชาย – เริ่มต้น 100 บาท")
+            st.write("🧴 สระผมชาย – เริ่มต้น 60 บาท")
+            st.write("🎨 ทำสีผมชาย – เริ่มต้น 400 บาท")
 
-            col1,col2,col3=st.columns(3)
+            st.markdown("### 👩 ผู้หญิง")
+            st.write("✂️ ตัดผมหญิง – เริ่มต้น 150 บาท")
+            st.write("🧴 สระ + ไดร์ – เริ่มต้น 120 บาท")
+            st.write("🎨 ทำสี – เริ่มต้น 700 บาท")
+            st.write("🌀 ดัดผม – เริ่มต้น 1200 บาท")
+            st.write("💁‍♀️ ยืดผม – เริ่มต้น 1200 บาท")
+            st.write("💆‍♀️ ทรีทเมนต์ – เริ่มต้น 300 บาท")
 
-            with col1:
-                with st.container(border=True):
-                    st.markdown("### ✂️ ตัดผมชาย")
-                    st.markdown("## 💰 เริ่มต้น 100 บาท")
-
-            with col2:
-                with st.container(border=True):
-                    st.markdown("### 🧴 สระผมชาย")
-                    st.markdown("## 💰 เริ่มต้น 60 บาท")
-
-            with col3:
-                with st.container(border=True):
-                    st.markdown("### 🎨 ทำสีผมชาย")
-                    st.markdown("## 💰 เริ่มต้น 400 บาท")
-
-            col4,col5=st.columns(2)
-
-            with col4:
-                with st.container(border=True):
-                    st.markdown("### 🌀 ดัดผมชาย")
-                    st.markdown("## 💰 เริ่มต้น 600 บาท")
-
-            with col5:
-                with st.container(border=True):
-                    st.markdown("### 💆‍♂️ ทรีทเมนต์ผม")
-                    st.markdown("## 💰 เริ่มต้น 200 บาท")
-
-            st.divider()
-
-            st.subheader("👩 บริการผู้หญิง")
-
-            col1,col2,col3=st.columns(3)
-
-            with col1:
-                with st.container(border=True):
-                    st.markdown("### ✂️ ตัดผมหญิง")
-                    st.markdown("## 💰 เริ่มต้น 150 บาท")
-
-            with col2:
-                with st.container(border=True):
-                    st.markdown("### 🧴 สระ + ไดร์")
-                    st.markdown("## 💰 เริ่มต้น 120 บาท")
-
-            with col3:
-                with st.container(border=True):
-                    st.markdown("### 🎨 ทำสีผม")
-                    st.markdown("## 💰 เริ่มต้น 700 บาท")
-
-            col4,col5,col6=st.columns(3)
-
-            with col4:
-                with st.container(border=True):
-                    st.markdown("### 🌀 ดัดผม")
-                    st.markdown("## 💰 เริ่มต้น 1200 บาท")
-
-            with col5:
-                with st.container(border=True):
-                    st.markdown("### 💁‍♀️ ยืดผม")
-                    st.markdown("## 💰 เริ่มต้น 1200 บาท")
-
-            with col6:
-                with st.container(border=True):
-                    st.markdown("### 💆‍♀️ ทรีทเมนต์ผม")
-                    st.markdown("## 💰 เริ่มต้น 300 บาท")
-
-# ---------------- BOOKING ----------------
+# -------- BOOKING --------
 
         with tab2:
 
@@ -307,8 +283,11 @@ else:
                     st.error("❌ เวลานี้มีคนจองแล้ว")
                     st.stop()
 
+                queue=generate_queue(date)
+
                 booking_sheet.append_row([
 
+                queue,
                 username,
                 name,
                 phone,
@@ -320,10 +299,10 @@ else:
 
                 ])
 
-                st.success("✅ จองคิวสำเร็จ")
+                st.success(f"✅ จองคิวสำเร็จ คิวที่ {queue}")
                 st.rerun()
 
-# ---------------- MY BOOKINGS ----------------
+# -------- MY BOOKINGS --------
 
         with tab3:
 
@@ -333,13 +312,13 @@ else:
 
             if not my.empty:
 
-                st.dataframe(my.drop(columns=["username"]))
+                st.dataframe(my)
 
             else:
 
                 st.info("ยังไม่มีการจอง")
 
-# ---------------- TODAY ----------------
+# -------- TODAY --------
 
         with tab4:
 
@@ -351,7 +330,7 @@ else:
 
             if not today_df.empty:
 
-                st.dataframe(today_df.drop(columns=["username"]))
+                st.dataframe(today_df)
 
             else:
 
@@ -367,10 +346,13 @@ else:
 
             st.title("Admin Dashboard")
 
+            users=get_users()
+            customers=users[users["username"]!="admin222"]
+
             col1,col2,col3=st.columns(3)
 
             col1.metric("การจองทั้งหมด",len(df))
-            col2.metric("ลูกค้า",len(get_users()))
+            col2.metric("ลูกค้า",len(customers))
 
             today=datetime.today().strftime("%Y-%m-%d")
 
@@ -378,7 +360,51 @@ else:
 
             col3.metric("คิววันนี้",len(today_df))
 
-            st.dataframe(df)
+            st.divider()
+
+# -------- REVENUE --------
+
+            prices={
+            "ตัดผม":120,
+            "สระผม":80,
+            "ทำสี":700,
+            "ดัดผม":1200,
+            "ยืดผม":1200,
+            "ทรีทเมนต์":300
+            }
+
+            if not df.empty:
+
+                df["ราคา"]=df["บริการ"].map(prices)
+
+                revenue=df.groupby("วันที่")["ราคา"].sum().reset_index()
+
+                fig=px.bar(
+                revenue,
+                x="วันที่",
+                y="ราคา",
+                title="📊 รายได้รายวัน"
+                )
+
+                st.plotly_chart(fig)
+
+# -------- POPULAR SERVICE --------
+
+                st.subheader("⭐ บริการยอดนิยม")
+
+                popular=df["บริการ"].value_counts().reset_index()
+
+                popular.columns=["บริการ","จำนวน"]
+
+                st.dataframe(popular)
+
+# -------- CALENDAR --------
+
+                st.subheader("📅 ปฏิทินคิว")
+
+                calendar=df.groupby("วันที่").size().reset_index(name="จำนวนคิว")
+
+                st.dataframe(calendar)
 
         with tab2:
 
@@ -392,6 +418,7 @@ else:
                     booking_sheet.append_row(list(df.columns))
 
                     for i,row in edited.iterrows():
+
                         booking_sheet.append_row(row.tolist())
 
                     st.success("บันทึกสำเร็จ")
