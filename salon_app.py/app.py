@@ -33,15 +33,25 @@ st.set_page_config(page_title="222 Salon",page_icon="💇‍♀️")
 
 st.markdown("""
 <style>
+
 .stApp{
 background-color:#0f172a;
 color:white;
 }
+
 div[data-testid="metric-container"]{
 background-color:#1e293b;
 padding:20px;
 border-radius:10px;
 }
+
+.stButton>button{
+background:#6366f1;
+color:white;
+border-radius:8px;
+height:40px;
+}
+
 </style>
 """,unsafe_allow_html=True)
 
@@ -224,17 +234,26 @@ else:
             st.title("💇‍♀️ เมนูบริการ")
 
             st.markdown("### 👨 ผู้ชาย")
-            st.write("✂️ ตัดผมชาย – เริ่มต้น 100 บาท")
-            st.write("🧴 สระผมชาย – เริ่มต้น 60 บาท")
-            st.write("🎨 ทำสีผมชาย – เริ่มต้น 400 บาท")
+            st.write("✂️ ตัดผมชาย – 120 บาท")
+            st.write("🧴 สระผมชาย – 80 บาท")
+            st.write("🪒 โกนหนวด – 80 บาท")
+            st.write("💆 นวดศีรษะ – 150 บาท")
+            st.write("🎨 ทำสีผมชาย – 500 บาท")
+            st.write("🧔 เซ็ตผม – 100 บาท")
 
             st.markdown("### 👩 ผู้หญิง")
-            st.write("✂️ ตัดผมหญิง – เริ่มต้น 150 บาท")
-            st.write("🧴 สระ + ไดร์ – เริ่มต้น 120 บาท")
-            st.write("🎨 ทำสี – เริ่มต้น 700 บาท")
-            st.write("🌀 ดัดผม – เริ่มต้น 1200 บาท")
-            st.write("💁‍♀️ ยืดผม – เริ่มต้น 1200 บาท")
-            st.write("💆‍♀️ ทรีทเมนต์ – เริ่มต้น 300 บาท")
+            st.write("✂️ ตัดผมหญิง – 150 บาท")
+            st.write("🧴 สระ + ไดร์ – 120 บาท")
+            st.write("🎨 ทำสี – 700 บาท")
+            st.write("🌀 ดัดผม – 1200 บาท")
+            st.write("💁‍♀️ ยืดผม – 1200 บาท")
+            st.write("💆‍♀️ ทรีทเมนต์ – 300 บาท")
+            st.write("✨ เคราติน – 1500 บาท")
+            st.write("💇‍♀️ ซอยผม – 200 บาท")
+            st.write("🎀 เซ็ตผมออกงาน – 500 บาท")
+
+            st.markdown("### 👧 เด็ก")
+            st.write("✂️ ตัดผมเด็ก – 100 บาท")
 
 # -------- BOOKING --------
 
@@ -246,24 +265,35 @@ else:
             phone=st.text_input("เบอร์โทร")
 
             service=st.selectbox("บริการ",[
-            "ตัดผม",
-            "สระผม",
+            "ตัดผมชาย",
+            "สระผมชาย",
+            "โกนหนวด",
+            "นวดศีรษะ",
+            "ทำสีผมชาย",
+            "เซ็ตผม",
+            "ตัดผมหญิง",
+            "สระ + ไดร์",
             "ทำสี",
             "ดัดผม",
             "ยืดผม",
-            "ทรีทเมนต์"
+            "ทรีทเมนต์",
+            "เคราติน",
+            "ซอยผม",
+            "เซ็ตผมออกงาน",
+            "ตัดผมเด็ก"
             ])
 
             date=st.date_input("วันที่")
 
+            if date < datetime.today().date():
+                st.error("ไม่สามารถจองย้อนหลังได้")
+                st.stop()
+
             available=get_available_times(date)
 
             if available:
-
                 booking_time=st.selectbox("เวลาที่ว่าง",available)
-
             else:
-
                 st.error("วันนี้เต็มแล้ว")
                 st.stop()
 
@@ -279,14 +309,12 @@ else:
                 ]
 
                 if len(duplicate)>0:
-
                     st.error("❌ เวลานี้มีคนจองแล้ว")
                     st.stop()
 
                 queue=generate_queue(date)
 
                 booking_sheet.append_row([
-
                 queue,
                 username,
                 name,
@@ -296,7 +324,6 @@ else:
                 booking_time,
                 detail,
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
                 ])
 
                 st.success(f"✅ จองคิวสำเร็จ คิวที่ {queue}")
@@ -311,11 +338,8 @@ else:
             my=df[df["username"]==username]
 
             if not my.empty:
-
                 st.dataframe(my)
-
             else:
-
                 st.info("ยังไม่มีการจอง")
 
 # -------- TODAY --------
@@ -329,11 +353,8 @@ else:
             st.subheader("คิววันนี้")
 
             if not today_df.empty:
-
                 st.dataframe(today_df)
-
             else:
-
                 st.info("วันนี้ยังไม่มีคิว")
 
 # ---------------- ADMIN ----------------
@@ -355,27 +376,34 @@ else:
             col2.metric("ลูกค้า",len(customers))
 
             today=datetime.today().strftime("%Y-%m-%d")
-
             today_df=df[df["วันที่"]==today]
 
             col3.metric("คิววันนี้",len(today_df))
 
             st.divider()
 
-# -------- REVENUE --------
-
             prices={
-            "ตัดผม":120,
-            "สระผม":80,
+            "ตัดผมชาย":120,
+            "สระผมชาย":80,
+            "โกนหนวด":80,
+            "นวดศีรษะ":150,
+            "ทำสีผมชาย":500,
+            "เซ็ตผม":100,
+            "ตัดผมหญิง":150,
+            "สระ + ไดร์":120,
             "ทำสี":700,
             "ดัดผม":1200,
             "ยืดผม":1200,
-            "ทรีทเมนต์":300
+            "ทรีทเมนต์":300,
+            "เคราติน":1500,
+            "ซอยผม":200,
+            "เซ็ตผมออกงาน":500,
+            "ตัดผมเด็ก":100
             }
 
             if not df.empty:
 
-                df["ราคา"]=df["บริการ"].map(prices)
+                df["ราคา"]=df["บริการ"].map(prices).fillna(0).astype(int)
 
                 revenue=df.groupby("วันที่")["ราคา"].sum().reset_index()
 
@@ -388,17 +416,12 @@ else:
 
                 st.plotly_chart(fig)
 
-# -------- POPULAR SERVICE --------
-
                 st.subheader("⭐ บริการยอดนิยม")
 
                 popular=df["บริการ"].value_counts().reset_index()
-
                 popular.columns=["บริการ","จำนวน"]
 
                 st.dataframe(popular)
-
-# -------- CALENDAR --------
 
                 st.subheader("📅 ปฏิทินคิว")
 
@@ -418,11 +441,9 @@ else:
                     booking_sheet.append_row(list(df.columns))
 
                     for i,row in edited.iterrows():
-
                         booking_sheet.append_row(row.tolist())
 
                     st.success("บันทึกสำเร็จ")
 
             else:
-
                 st.info("ยังไม่มีข้อมูล")
