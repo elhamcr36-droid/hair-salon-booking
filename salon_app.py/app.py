@@ -5,9 +5,7 @@ import pandas as pd
 from datetime import datetime, time
 import hashlib
 
-# ---------------------------
-# CONFIG
-# ---------------------------
+# ---------------- CONFIG ----------------
 
 SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
 
@@ -30,28 +28,83 @@ users_sheet = spreadsheet.worksheet("users")
 
 st.set_page_config(page_title="222Salon", page_icon="💇‍♀️")
 
-# ---------------------------
-# FUNCTIONS
-# ---------------------------
+# ---------------- FUNCTIONS ----------------
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-def get_bookings():
-    data = booking_sheet.get_all_values()
-    if len(data) > 1:
-        return pd.DataFrame(data[1:], columns=data[0])
-    return pd.DataFrame()
-
 def get_users():
-    data = users_sheet.get_all_values()
-    if len(data) > 1:
-        return pd.DataFrame(data[1:], columns=data[0])
-    return pd.DataFrame()
 
-# ---------------------------
-# SESSION
-# ---------------------------
+    data = users_sheet.get_all_values()
+
+    if len(data) == 0:
+        return pd.DataFrame(columns=["username","password"])
+
+    headers = data[0]
+
+    if len(data) == 1:
+        return pd.DataFrame(columns=headers)
+
+    df = pd.DataFrame(data[1:], columns=headers)
+
+    df.columns = df.columns.str.strip()
+
+    return df
+
+
+def get_bookings():
+
+    data = booking_sheet.get_all_values()
+
+    if len(data) == 0:
+        return pd.DataFrame()
+
+    headers = data[0]
+
+    if len(data) == 1:
+        return pd.DataFrame(columns=headers)
+
+    df = pd.DataFrame(data[1:], columns=headers)
+
+    return df
+
+
+def generate_times():
+
+    times = []
+
+    start = datetime.strptime("08:30","%H:%M")
+    end = datetime.strptime("17:30","%H:%M")
+
+    current = start
+
+    while current <= end:
+
+        times.append(current.strftime("%H:%M"))
+
+        current += pd.Timedelta(minutes=30)
+
+    return times
+
+
+def get_available_times(date):
+
+    df = get_bookings()
+
+    all_times = generate_times()
+
+    if df.empty:
+        return all_times
+
+    day = df[df["วันที่"] == str(date)]
+
+    booked = day["เวลา"].tolist()
+
+    available = [t for t in all_times if t not in booked]
+
+    return available
+
+# ---------------- SESSION ----------------
 
 if "login" not in st.session_state:
     st.session_state.login = False
@@ -59,9 +112,7 @@ if "login" not in st.session_state:
 if "page" not in st.session_state:
     st.session_state.page = "login"
 
-# ---------------------------
-# LOGIN / REGISTER PAGE
-# ---------------------------
+# ---------------- LOGIN / REGISTER ----------------
 
 if not st.session_state.login:
 
@@ -74,7 +125,6 @@ if not st.session_state.login:
 
         if st.button("เข้าสู่ระบบ"):
 
-            # ADMIN LOGIN
             if username == "admin222" and password == "admin222":
 
                 st.session_state.login = True
@@ -89,9 +139,9 @@ if not st.session_state.login:
 
             if not user.empty:
 
-                stored_password = user.iloc[0]["password"]
+                stored = user.iloc[0]["password"]
 
-                if stored_password == hash_password(password):
+                if stored == hash_password(password):
 
                     st.session_state.login = True
                     st.session_state.role = "customer"
@@ -108,10 +158,6 @@ if not st.session_state.login:
         if st.button("สมัครสมาชิก"):
             st.session_state.page = "register"
             st.rerun()
-
-# ---------------------------
-# REGISTER PAGE
-# ---------------------------
 
     elif st.session_state.page == "register":
 
@@ -138,15 +184,16 @@ if not st.session_state.login:
                 st.success("สมัครสมาชิกสำเร็จ")
 
                 st.session_state.page = "login"
+
                 st.rerun()
 
         if st.button("กลับหน้า Login"):
+
             st.session_state.page = "login"
+
             st.rerun()
 
-# ---------------------------
-# AFTER LOGIN
-# ---------------------------
+# ---------------- AFTER LOGIN ----------------
 
 else:
 
@@ -159,9 +206,7 @@ else:
 
     df = get_bookings()
 
-# ---------------------------
-# CUSTOMER
-# ---------------------------
+# ---------------- CUSTOMER ----------------
 
     if role == "customer":
 
@@ -184,45 +229,40 @@ else:
 
             date = st.date_input("วันที่")
 
-            booking_time = st.time_input(
-            "เวลา",
-            value=time(8,30)
-            )
+            available = get_available_times(date)
+
+            if available:
+
+                booking_time = st.selectbox(
+                "เวลาที่ว่าง",
+                available
+                )
+
+            else:
+
+                st.error("วันนี้เต็มแล้ว")
+                st.stop()
 
             detail = st.text_area("รายละเอียด")
 
             if st.button("ยืนยันการจอง"):
 
-                if booking_time < time(8,30) or booking_time > time(17,30):
-                    st.error("เวลาต้องอยู่ 08:30 - 17:30")
+                booking_sheet.append_row([
 
-                else:
+                username,
+                name,
+                phone,
+                service,
+                str(date),
+                booking_time,
+                detail,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                    if not df.empty:
+                ])
 
-                        duplicate = df[
-                        (df["วันที่"] == str(date)) &
-                        (df["เวลา"] == str(booking_time))
-                        ]
+                st.success("จองคิวสำเร็จ")
 
-                        if not duplicate.empty:
-                            st.error("เวลานี้มีคนจองแล้ว")
-                            st.stop()
-
-                    booking_sheet.append_row([
-
-                    username,
-                    name,
-                    phone,
-                    service,
-                    str(date),
-                    str(booking_time),
-                    detail,
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-                    ])
-
-                    st.success("จองคิวสำเร็จ")
+# ---------------- MY QUEUE ----------------
 
         if menu == "คิวของฉัน":
 
@@ -231,6 +271,8 @@ else:
             st.subheader("คิวของฉัน")
 
             st.dataframe(my)
+
+# ---------------- TODAY ----------------
 
         if menu == "คิววันนี้":
 
@@ -242,9 +284,7 @@ else:
 
             st.dataframe(today_df)
 
-# ---------------------------
-# ADMIN
-# ---------------------------
+# ---------------- ADMIN ----------------
 
     if role == "admin":
 
@@ -269,6 +309,8 @@ else:
 
             col3.metric("คิววันนี้", len(today_df))
 
+# ---------------- MANAGE BOOKINGS ----------------
+
         if menu == "จัดการการจอง":
 
             if not df.empty:
@@ -282,10 +324,13 @@ else:
                     rows = edited[edited["เลือก"]==True]
 
                     for index in sorted(rows.index, reverse=True):
+
                         booking_sheet.delete_rows(index+2)
 
                     st.success("ลบสำเร็จ")
+
                     st.rerun()
 
             else:
+
                 st.info("ยังไม่มีข้อมูล")
