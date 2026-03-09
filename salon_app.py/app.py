@@ -56,7 +56,6 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def get_users():
-
     data = users_sheet.get_all_values()
 
     if not data:
@@ -70,7 +69,6 @@ def get_users():
     return pd.DataFrame(data[1:],columns=headers)
 
 def get_bookings():
-
     data=booking_sheet.get_all_values()
 
     if not data:
@@ -82,6 +80,23 @@ def get_bookings():
         return pd.DataFrame(columns=headers)
 
     return pd.DataFrame(data[1:],columns=headers)
+
+# -------- DELETE BOOKING --------
+
+def delete_booking(queue_id):
+
+    df=get_bookings()
+
+    df=df[df["คิว"].astype(str)!=str(queue_id)]
+
+    booking_sheet.clear()
+
+    booking_sheet.append_row([
+    "คิว","username","ชื่อ","เบอร์","บริการ","วันที่","เวลา","รายละเอียด","created"
+    ])
+
+    for i,row in df.iterrows():
+        booking_sheet.append_row(row.tolist())
 
 # -------- TIME SLOT --------
 
@@ -217,41 +232,37 @@ else:
         "แผนที่ร้าน"
         ])
 
-# -------- SERVICE MENU --------
+# -------- SERVICE --------
 
         with tab1:
 
-            st.title("💇‍♀️ เมนูบริการ")
+            st.title("เมนูบริการ")
 
-            st.markdown("### 👨 ผู้ชาย")
-            st.write("✂️ ตัดผมชาย – 120")
-            st.write("🧴 สระผมชาย – 80")
-            st.write("🪒 โกนหนวด – 80")
-            st.write("💆 นวดศีรษะ – 150")
-            st.write("🎨 ทำสีผมชาย – 500")
-            st.write("🔥 ดัดผมชาย – 900")
-            st.write("✨ ยืดผมชาย – 900")
+            st.write("ตัดผมชาย 120")
+            st.write("สระผมชาย 80")
+            st.write("โกนหนวด 80")
+            st.write("นวดศีรษะ 150")
+            st.write("ทำสีผมชาย 500")
+            st.write("ดัดผมชาย 900")
+            st.write("ยืดผมชาย 900")
 
-            st.markdown("### 👩 ผู้หญิง")
-            st.write("✂️ ตัดผมหญิง – 150")
-            st.write("💇‍♀️ ซอยผม – 200")
-            st.write("🧴 สระ + ไดร์ – 120")
-            st.write("🎀 เซ็ตผม – 200")
-            st.write("🎉 เซ็ตผมออกงาน – 500")
-            st.write("👰 ทำผมเจ้าสาว – 2500")
+            st.write("ตัดผมหญิง 150")
+            st.write("ซอยผม 200")
+            st.write("สระ + ไดร์ 120")
+            st.write("เซ็ตผม 200")
+            st.write("เซ็ตผมออกงาน 500")
+            st.write("ทำผมเจ้าสาว 2500")
 
-            st.markdown("### 🎨 ทำสีผม")
-            st.write("ทำสีผม – 700")
-            st.write("ไฮไลท์ – 900")
-            st.write("ออมเบร – 1200")
-            st.write("บาลายาจ – 1500")
+            st.write("ทำสีผม 700")
+            st.write("ไฮไลท์ 900")
+            st.write("ออมเบร 1200")
+            st.write("บาลายาจ 1500")
 
-            st.markdown("### 💆‍♀️ บำรุงผม")
-            st.write("ทรีทเมนต์ – 300")
-            st.write("สปาผม – 400")
-            st.write("เคราติน – 1500")
+            st.write("ทรีทเมนต์ 300")
+            st.write("สปาผม 400")
+            st.write("เคราติน 1500")
 
-# -------- BOOKING --------
+# -------- BOOK --------
 
         with tab2:
 
@@ -296,17 +307,45 @@ else:
                 st.success(f"จองสำเร็จ คิวที่ {queue}")
                 st.rerun()
 
-# -------- MY BOOKINGS --------
+# -------- MY BOOKING --------
 
         with tab3:
+
+            st.header("คิวของฉัน")
+
             my=df[df["username"]==username]
-            st.dataframe(my)
+
+            if my.empty:
+                st.info("ยังไม่มีการจอง")
+
+            else:
+
+                for i,row in my.iterrows():
+
+                    col1,col2=st.columns([4,1])
+
+                    with col1:
+
+                        st.write(
+                        f"คิว {row['คิว']} | {row['บริการ']} | {row['วันที่']} | {row['เวลา']}"
+                        )
+
+                    with col2:
+
+                        if st.button("❌ ยกเลิก",key=row["คิว"]):
+
+                            delete_booking(row["คิว"])
+
+                            st.success("ยกเลิกคิวสำเร็จ")
+
+                            st.rerun()
 
 # -------- TODAY --------
 
         with tab4:
 
             today=datetime.today().strftime("%Y-%m-%d")
+
             today_df=df[df["วันที่"]==today]
 
             st.dataframe(today_df)
@@ -315,7 +354,7 @@ else:
 
         with tab5:
 
-            st.title("📍 พิกัดร้าน 222 Salon")
+            st.title("พิกัดร้าน")
 
             shop_lat=7.0086
             shop_lon=100.4747
@@ -328,7 +367,7 @@ else:
             st.map(map_data)
 
             st.markdown(
-            f"[🧭 เปิดนำทาง Google Maps](https://www.google.com/maps?q={shop_lat},{shop_lon})"
+            f"https://www.google.com/maps?q={shop_lat},{shop_lon}"
             )
 
 # ---------------- ADMIN ----------------
@@ -346,17 +385,32 @@ else:
             col1.metric("การจองทั้งหมด",len(df))
 
             today=datetime.today().strftime("%Y-%m-%d")
+
             today_df=df[df["วันที่"]==today]
 
             col2.metric("คิววันนี้",len(today_df))
 
             prices={
             "ตัดผมชาย":120,
+            "สระผมชาย":80,
+            "โกนหนวด":80,
+            "นวดศีรษะ":150,
+            "ทำสีผมชาย":500,
+            "ดัดผมชาย":900,
+            "ยืดผมชาย":900,
             "ตัดผมหญิง":150,
             "ซอยผม":200,
             "สระ + ไดร์":120,
+            "เซ็ตผม":200,
+            "เซ็ตผมออกงาน":500,
+            "ทำผมเจ้าสาว":2500,
             "ทำสีผม":700,
-            "ทรีทเมนต์":300
+            "ไฮไลท์":900,
+            "ออมเบร":1200,
+            "บาลายาจ":1500,
+            "ทรีทเมนต์":300,
+            "สปาผม":400,
+            "เคราติน":1500
             }
 
             if not df.empty:
@@ -374,6 +428,19 @@ else:
 
                 st.plotly_chart(fig)
 
+                service=df["บริการ"].value_counts().reset_index()
+
+                service.columns=["บริการ","จำนวน"]
+
+                fig2=px.pie(
+                service,
+                names="บริการ",
+                values="จำนวน",
+                title="บริการยอดนิยม"
+                )
+
+                st.plotly_chart(fig2)
+
         with tab2:
 
             if not df.empty:
@@ -383,6 +450,7 @@ else:
                 if st.button("บันทึก"):
 
                     booking_sheet.clear()
+
                     booking_sheet.append_row(list(df.columns))
 
                     for i,row in edited.iterrows():
