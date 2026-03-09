@@ -26,7 +26,7 @@ client = gspread.authorize(creds)
 
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
 
-# ---------------- CREATE SHEETS ----------------
+# ---------------- CREATE SHEET IF NOT EXIST ----------------
 
 def get_or_create_sheet(name, headers):
 
@@ -37,7 +37,6 @@ def get_or_create_sheet(name, headers):
         sheet.append_row(headers)
 
     return sheet
-
 
 sheet_users = get_or_create_sheet(
     "users",
@@ -77,7 +76,6 @@ def add_booking(user,service,date,time):
 
     bookings = load_bookings()
 
-    # check duplicate time
     same = bookings[
         (bookings["date"] == date) &
         (bookings["time"] == time)
@@ -99,10 +97,16 @@ def add_booking(user,service,date,time):
 
     return True
 
+def cancel_booking(queue_id):
+
+    cell = sheet_booking.find(str(queue_id))
+
+    if cell:
+        sheet_booking.delete_rows(cell.row)
+
 # ---------------- SESSION ----------------
 
 if "login" not in st.session_state:
-
     st.session_state.login = False
     st.session_state.user = ""
 
@@ -168,12 +172,22 @@ def booking():
 
     services = [
 
-        "ตัดผมชาย","ตัดผมหญิง","สระผม","ไดร์ผม",
-        "ย้อมผม","ดัดผม","ยืดผม","ทำสีแฟชั่น",
-        "ไฮไลท์","ทรีทเมนต์","โกนหนวด",
-        "สปาผม","บำรุงเส้นผม","ซอยผม",
-        "ตัดหน้าม้า","ย้อมโคนผม"
-
+        "ตัดผมชาย",
+        "ตัดผมหญิง",
+        "สระผม",
+        "ไดร์ผม",
+        "ย้อมผม",
+        "ดัดผม",
+        "ยืดผม",
+        "ทำสีแฟชั่น",
+        "ไฮไลท์ผม",
+        "ทรีทเมนต์",
+        "โกนหนวด",
+        "สปาผม",
+        "บำรุงเส้นผม",
+        "ซอยผม",
+        "ตัดหน้าม้า",
+        "ย้อมโคนผม"
     ]
 
     service = st.selectbox("เลือกบริการ", services)
@@ -215,46 +229,63 @@ def my_queue():
 
     if len(df) > 0:
 
-        st.dataframe(df)
+        for i,row in df.iterrows():
+
+            col1,col2,col3,col4 = st.columns(4)
+
+            col1.write(row["service"])
+            col2.write(row["date"])
+            col3.write(row["time"])
+
+            if col4.button("ยกเลิก",key=row["queue"]):
+
+                cancel_booking(row["queue"])
+
+                st.success("ยกเลิกคิวแล้ว")
+
+                st.rerun()
 
     else:
 
         st.info("ยังไม่มีคิว")
 
-# ---------------- ALL QUEUE ----------------
+# ---------------- ADMIN PANEL ----------------
 
-def all_queue():
+def admin_panel():
 
-    st.title("📊 คิวทั้งหมด")
-
-    df = load_bookings()
-
-    if len(df) > 0:
-
-        st.dataframe(df)
-
-# ---------------- DASHBOARD ----------------
-
-def dashboard():
-
-    st.title("📊 Dashboard ร้าน")
+    st.title("🛠 Admin Panel")
 
     df = load_bookings()
 
-    if len(df) > 0:
+    if len(df) == 0:
+        st.info("ไม่มีข้อมูล")
+        return
 
-        st.metric("จำนวนคิวทั้งหมด", len(df))
+    user_filter = st.selectbox(
+        "เลือกลูกค้า",
+        ["ทั้งหมด"] + list(df["user"].unique())
+    )
 
-        service_count = df["service"].value_counts().reset_index()
-        service_count.columns = ["service","count"]
+    if user_filter != "ทั้งหมด":
 
-        fig = px.bar(service_count,x="service",y="count")
+        df = df[df["user"] == user_filter]
 
-        st.plotly_chart(fig)
+    for i,row in df.iterrows():
 
-    else:
+        col1,col2,col3,col4,col5 = st.columns(5)
 
-        st.info("ยังไม่มีข้อมูล")
+        col1.write(row["user"])
+        col2.write(row["service"])
+        col3.write(row["date"])
+        col4.write(row["time"])
+
+        if col5.button("ลบ",key="del"+str(row["queue"])):
+
+            cancel_booking(row["queue"])
+
+            st.success("ลบคิวแล้ว")
+
+            st.rerun()
 
 # ---------------- MAP ----------------
 
@@ -271,21 +302,18 @@ def map_shop():
 
     st.write("พิกัดร้าน : 7.0084 , 100.4747")
 
-# ---------------- MENU ----------------
+# ---------------- MENU TOP ----------------
 
 if st.session_state.login:
 
-    st.sidebar.title("📋 Menu")
-
     if st.session_state.user == "admin":
 
-        menu = st.sidebar.selectbox(
-            "เลือกเมนู",
+        menu = st.selectbox(
+            "เมนู",
             [
-                "Dashboard",
                 "จองคิว",
                 "คิวของฉัน",
-                "คิวทั้งหมด",
+                "Admin Panel",
                 "แผนที่ร้าน",
                 "Logout"
             ]
@@ -293,8 +321,8 @@ if st.session_state.login:
 
     else:
 
-        menu = st.sidebar.selectbox(
-            "เลือกเมนู",
+        menu = st.selectbox(
+            "เมนู",
             [
                 "จองคิว",
                 "คิวของฉัน",
@@ -303,17 +331,14 @@ if st.session_state.login:
             ]
         )
 
-    if menu == "Dashboard":
-        dashboard()
-
-    elif menu == "จองคิว":
+    if menu == "จองคิว":
         booking()
 
     elif menu == "คิวของฉัน":
         my_queue()
 
-    elif menu == "คิวทั้งหมด":
-        all_queue()
+    elif menu == "Admin Panel":
+        admin_panel()
 
     elif menu == "แผนที่ร้าน":
         map_shop()
@@ -325,11 +350,12 @@ if st.session_state.login:
 
 else:
 
-    st.sidebar.title("📋 Menu")
-
-    menu = st.sidebar.selectbox(
-        "เลือกเมนู",
-        ["Login","Register"]
+    menu = st.selectbox(
+        "เมนู",
+        [
+            "Login",
+            "Register"
+        ]
     )
 
     if menu == "Login":
