@@ -1,13 +1,13 @@
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import datetime, time
 import pandas as pd
+from datetime import datetime, time
 import hashlib
 
-# --------------------------
-# Google Sheets Config
-# --------------------------
+# ---------------------------
+# CONFIG
+# ---------------------------
 
 SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
 
@@ -23,18 +23,16 @@ scopes=scope
 
 client = gspread.authorize(credentials)
 
-booking_sheet = client.open_by_key(SPREADSHEET_ID).worksheet("bookings")
-users_sheet = client.open_by_key(SPREADSHEET_ID).worksheet("users")
+spreadsheet = client.open_by_key(SPREADSHEET_ID)
 
-# --------------------------
-# Page
-# --------------------------
+booking_sheet = spreadsheet.worksheet("bookings")
+users_sheet = spreadsheet.worksheet("users")
 
 st.set_page_config(page_title="222Salon", page_icon="💇‍♀️")
 
-# --------------------------
-# Helper
-# --------------------------
+# ---------------------------
+# FUNCTIONS
+# ---------------------------
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -51,63 +49,30 @@ def get_users():
         return pd.DataFrame(data[1:], columns=data[0])
     return pd.DataFrame()
 
-# --------------------------
-# Session
-# --------------------------
+# ---------------------------
+# SESSION
+# ---------------------------
 
 if "login" not in st.session_state:
     st.session_state.login = False
 
-# --------------------------
-# LOGIN PAGE
-# --------------------------
+if "page" not in st.session_state:
+    st.session_state.page = "login"
+
+# ---------------------------
+# LOGIN / REGISTER PAGE
+# ---------------------------
 
 if not st.session_state.login:
 
-    menu = st.sidebar.selectbox(
-    "เมนู",
-    ["เข้าสู่ระบบ","สมัครสมาชิก"]
-    )
+    if st.session_state.page == "login":
 
-    st.title("💇‍♀️ 222Salon")
-
-    # ----------------------
-    # REGISTER
-    # ----------------------
-
-    if menu == "สมัครสมาชิก":
-
-        st.subheader("สมัครสมาชิก")
+        st.title("💇‍♀️ 222Salon")
 
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
 
-        if st.button("สมัครสมาชิก"):
-
-            df = get_users()
-
-            if username in df["username"].values:
-                st.error("Username นี้มีแล้ว")
-            else:
-                users_sheet.append_row([
-                username,
-                hash_password(password)
-                ])
-
-                st.success("สมัครสมาชิกสำเร็จ")
-
-    # ----------------------
-    # LOGIN
-    # ----------------------
-
-    if menu == "เข้าสู่ระบบ":
-
-        st.subheader("เข้าสู่ระบบ")
-
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-
-        if st.button("Login"):
+        if st.button("เข้าสู่ระบบ"):
 
             # ADMIN LOGIN
             if username == "admin222" and password == "admin222":
@@ -140,9 +105,48 @@ if not st.session_state.login:
             else:
                 st.error("ไม่พบผู้ใช้")
 
-# --------------------------
+        if st.button("สมัครสมาชิก"):
+            st.session_state.page = "register"
+            st.rerun()
+
+# ---------------------------
+# REGISTER PAGE
+# ---------------------------
+
+    elif st.session_state.page == "register":
+
+        st.title("สมัครสมาชิก")
+
+        username = st.text_input("Username ใหม่")
+        password = st.text_input("Password ใหม่", type="password")
+
+        if st.button("ยืนยันสมัครสมาชิก"):
+
+            df = get_users()
+
+            if username in df["username"].values:
+
+                st.error("Username นี้มีแล้ว")
+
+            else:
+
+                users_sheet.append_row([
+                username,
+                hash_password(password)
+                ])
+
+                st.success("สมัครสมาชิกสำเร็จ")
+
+                st.session_state.page = "login"
+                st.rerun()
+
+        if st.button("กลับหน้า Login"):
+            st.session_state.page = "login"
+            st.rerun()
+
+# ---------------------------
 # AFTER LOGIN
-# --------------------------
+# ---------------------------
 
 else:
 
@@ -155,9 +159,9 @@ else:
 
     df = get_bookings()
 
-# --------------------------
-# CUSTOMER PAGE
-# --------------------------
+# ---------------------------
+# CUSTOMER
+# ---------------------------
 
     if role == "customer":
 
@@ -166,11 +170,7 @@ else:
         ["จองคิว","คิวของฉัน","คิววันนี้"]
         )
 
-        st.title("💇‍♀️ ระบบจองคิวร้านทำผม")
-
-        # ----------------------
-        # BOOKING
-        # ----------------------
+        st.title("ระบบจองคิวร้านทำผม")
 
         if menu == "จองคิว":
 
@@ -224,10 +224,6 @@ else:
 
                     st.success("จองคิวสำเร็จ")
 
-        # ----------------------
-        # MY QUEUE
-        # ----------------------
-
         if menu == "คิวของฉัน":
 
             my = df[df["username"] == username]
@@ -235,10 +231,6 @@ else:
             st.subheader("คิวของฉัน")
 
             st.dataframe(my)
-
-        # ----------------------
-        # TODAY
-        # ----------------------
 
         if menu == "คิววันนี้":
 
@@ -250,9 +242,9 @@ else:
 
             st.dataframe(today_df)
 
-# --------------------------
-# ADMIN PAGE
-# --------------------------
+# ---------------------------
+# ADMIN
+# ---------------------------
 
     if role == "admin":
 
@@ -261,11 +253,7 @@ else:
         ["Dashboard","จัดการการจอง"]
         )
 
-        st.title("👑 Admin Panel")
-
-        # ----------------------
-        # DASHBOARD
-        # ----------------------
+        st.title("Admin Panel")
 
         if menu == "Dashboard":
 
@@ -273,17 +261,13 @@ else:
 
             col1.metric("การจองทั้งหมด", len(df))
 
-            col2.metric("ลูกค้า", len(get_users()))
+            col2.metric("ลูกค้าทั้งหมด", len(get_users()))
 
             today = datetime.today().strftime("%Y-%m-%d")
 
             today_df = df[df["วันที่"] == today]
 
             col3.metric("คิววันนี้", len(today_df))
-
-        # ----------------------
-        # MANAGE BOOKINGS
-        # ----------------------
 
         if menu == "จัดการการจอง":
 
@@ -304,6 +288,4 @@ else:
                     st.rerun()
 
             else:
-
                 st.info("ยังไม่มีข้อมูล")
-
