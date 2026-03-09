@@ -21,7 +21,6 @@ scopes=scope
 )
 
 client = gspread.authorize(credentials)
-
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
 
 booking_sheet = spreadsheet.worksheet("bookings")
@@ -29,29 +28,25 @@ users_sheet = spreadsheet.worksheet("users")
 
 st.set_page_config(page_title="222 Salon",page_icon="💇‍♀️")
 
-# ---------------- UI STYLE ----------------
+# ---------------- STYLE ----------------
 
 st.markdown("""
 <style>
-
 .stApp{
 background-color:#0f172a;
 color:white;
 }
-
 div[data-testid="metric-container"]{
 background-color:#1e293b;
 padding:20px;
 border-radius:10px;
 }
-
 .stButton>button{
 background:#6366f1;
 color:white;
 border-radius:8px;
 height:40px;
 }
-
 </style>
 """,unsafe_allow_html=True)
 
@@ -100,7 +95,6 @@ def generate_times():
     current=start
 
     while current<=end:
-
         times.append(current.strftime("%H:%M"))
         current+=timedelta(minutes=30)
 
@@ -109,14 +103,12 @@ def generate_times():
 def get_available_times(date):
 
     df=get_bookings()
-
     all_times=generate_times()
 
     if df.empty:
         return all_times
 
     day=df[df["วันที่"]==str(date)]
-
     booked=day["เวลา"].tolist()
 
     return [t for t in all_times if t not in booked]
@@ -161,7 +153,6 @@ if not st.session_state.login:
             st.rerun()
 
         df=get_users()
-
         user=df[df["username"]==username]
 
         if not user.empty:
@@ -191,11 +182,9 @@ if not st.session_state.login:
         df=get_users()
 
         if new_user in df["username"].values:
-
             st.error("Username นี้มีแล้ว")
 
         else:
-
             users_sheet.append_row([
             new_user,
             hash_password(new_pass)
@@ -234,14 +223,33 @@ else:
 
             st.title("💇‍♀️ เมนูบริการ")
 
+            st.markdown("### 👨 ผู้ชาย")
             st.write("✂️ ตัดผมชาย – 120")
+            st.write("🧴 สระผมชาย – 80")
+            st.write("🪒 โกนหนวด – 80")
+            st.write("💆 นวดศีรษะ – 150")
+            st.write("🎨 ทำสีผมชาย – 500")
+            st.write("🔥 ดัดผมชาย – 900")
+            st.write("✨ ยืดผมชาย – 900")
+
+            st.markdown("### 👩 ผู้หญิง")
             st.write("✂️ ตัดผมหญิง – 150")
-            st.write("✂️ ตัดผมเด็ก – 100")
+            st.write("💇‍♀️ ซอยผม – 200")
             st.write("🧴 สระ + ไดร์ – 120")
-            st.write("🎨 ทำสี – 700")
-            st.write("🌀 ดัดผม – 1200")
-            st.write("💁‍♀️ ยืดผม – 1200")
-            st.write("💆‍♀️ ทรีทเมนต์ – 300")
+            st.write("🎀 เซ็ตผม – 200")
+            st.write("🎉 เซ็ตผมออกงาน – 500")
+            st.write("👰 ทำผมเจ้าสาว – 2500")
+
+            st.markdown("### 🎨 ทำสีผม")
+            st.write("ทำสีผม – 700")
+            st.write("ไฮไลท์ – 900")
+            st.write("ออมเบร – 1200")
+            st.write("บาลายาจ – 1500")
+
+            st.markdown("### 💆‍♀️ บำรุงผม")
+            st.write("ทรีทเมนต์ – 300")
+            st.write("สปาผม – 400")
+            st.write("เคราติน – 1500")
 
 # -------- BOOKING --------
 
@@ -253,14 +261,12 @@ else:
             phone=st.text_input("เบอร์โทร")
 
             service=st.selectbox("บริการ",[
-            "ตัดผมชาย",
-            "ตัดผมหญิง",
-            "ตัดผมเด็ก",
-            "สระ + ไดร์",
-            "ทำสี",
-            "ดัดผม",
-            "ยืดผม",
-            "ทรีทเมนต์"
+            "ตัดผมชาย","สระผมชาย","โกนหนวด","นวดศีรษะ",
+            "ทำสีผมชาย","ดัดผมชาย","ยืดผมชาย",
+            "ตัดผมหญิง","ซอยผม","สระ + ไดร์",
+            "เซ็ตผม","เซ็ตผมออกงาน","ทำผมเจ้าสาว",
+            "ทำสีผม","ไฮไลท์","ออมเบร","บาลายาจ",
+            "ทรีทเมนต์","สปาผม","เคราติน"
             ])
 
             date=st.date_input("วันที่")
@@ -293,9 +299,7 @@ else:
 # -------- MY BOOKINGS --------
 
         with tab3:
-
             my=df[df["username"]==username]
-
             st.dataframe(my)
 
 # -------- TODAY --------
@@ -303,12 +307,11 @@ else:
         with tab4:
 
             today=datetime.today().strftime("%Y-%m-%d")
-
             today_df=df[df["วันที่"]==today]
 
             st.dataframe(today_df)
 
-# -------- MAP + GPS --------
+# -------- MAP --------
 
         with tab5:
 
@@ -324,17 +327,15 @@ else:
 
             st.map(map_data)
 
-            st.subheader("นำทางไปที่ร้าน")
-
-            maps_url=f"https://www.google.com/maps?q={shop_lat},{shop_lon}"
-
-            st.markdown(f"[🧭 เปิด Google Maps]({maps_url})")
+            st.markdown(
+            f"[🧭 เปิดนำทาง Google Maps](https://www.google.com/maps?q={shop_lat},{shop_lon})"
+            )
 
 # ---------------- ADMIN ----------------
 
     if role=="admin":
 
-        tab1,tab2=st.tabs(["Dashboard","จัดการคิว"])
+        tab1,tab2=st.tabs(["Dashboard","จัดการการจอง"])
 
         with tab1:
 
@@ -345,7 +346,6 @@ else:
             col1.metric("การจองทั้งหมด",len(df))
 
             today=datetime.today().strftime("%Y-%m-%d")
-
             today_df=df[df["วันที่"]==today]
 
             col2.metric("คิววันนี้",len(today_df))
@@ -353,11 +353,9 @@ else:
             prices={
             "ตัดผมชาย":120,
             "ตัดผมหญิง":150,
-            "ตัดผมเด็ก":100,
+            "ซอยผม":200,
             "สระ + ไดร์":120,
-            "ทำสี":700,
-            "ดัดผม":1200,
-            "ยืดผม":1200,
+            "ทำสีผม":700,
             "ทรีทเมนต์":300
             }
 
