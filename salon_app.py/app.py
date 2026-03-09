@@ -8,7 +8,7 @@ import plotly.express as px
 
 # ---------------- CONFIG ----------------
 
-SPREADSHEET_ID = "ใส่_ID_GoogleSheet"
+SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
 
 scope = [
 "https://www.googleapis.com/auth/spreadsheets",
@@ -157,3 +157,4 @@ map_data = pd.DataFrame({
 st.map(map_data)
 
 st.info("📍 ร้านอยู่หาดใหญ่")
+
