@@ -2,7 +2,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
-from datetime import datetime, time
+from datetime import datetime
 import hashlib
 
 # ---------------- CONFIG ----------------
@@ -33,11 +33,12 @@ st.set_page_config(page_title="222Salon", page_icon="💇‍♀️")
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
+
 def get_users():
 
     data = users_sheet.get_all_values()
 
-    if len(data) == 0:
+    if not data:
         return pd.DataFrame(columns=["username","password"])
 
     headers = data[0]
@@ -56,7 +57,7 @@ def get_bookings():
 
     data = booking_sheet.get_all_values()
 
-    if len(data) == 0:
+    if not data:
         return pd.DataFrame()
 
     headers = data[0]
@@ -104,6 +105,7 @@ def get_available_times(date):
 
     return available
 
+
 # ---------------- SESSION ----------------
 
 if "login" not in st.session_state:
@@ -111,6 +113,7 @@ if "login" not in st.session_state:
 
 if "page" not in st.session_state:
     st.session_state.page = "login"
+
 
 # ---------------- LOGIN / REGISTER ----------------
 
@@ -193,6 +196,7 @@ if not st.session_state.login:
 
             st.rerun()
 
+
 # ---------------- AFTER LOGIN ----------------
 
 else:
@@ -205,6 +209,7 @@ else:
         st.rerun()
 
     df = get_bookings()
+
 
 # ---------------- CUSTOMER ----------------
 
@@ -247,6 +252,18 @@ else:
 
             if st.button("ยืนยันการจอง"):
 
+                df_check = get_bookings()
+
+                duplicate = df_check[
+                    (df_check["วันที่"] == str(date)) &
+                    (df_check["เวลา"] == booking_time)
+                ]
+
+                if not duplicate.empty:
+
+                    st.error("❌ เวลานี้มีคนจองแล้ว")
+                    st.stop()
+
                 booking_sheet.append_row([
 
                 username,
@@ -262,6 +279,7 @@ else:
 
                 st.success("จองคิวสำเร็จ")
 
+
 # ---------------- MY QUEUE ----------------
 
         if menu == "คิวของฉัน":
@@ -270,7 +288,30 @@ else:
 
             st.subheader("คิวของฉัน")
 
-            st.dataframe(my)
+            if not my.empty:
+
+                my = my.reset_index()
+
+                my.insert(0,"ยกเลิก",False)
+
+                edited = st.data_editor(my)
+
+                if st.button("ยกเลิกคิวที่เลือก"):
+
+                    cancel_rows = edited[edited["ยกเลิก"] == True]
+
+                    for index in sorted(cancel_rows["index"], reverse=True):
+
+                        booking_sheet.delete_rows(index+2)
+
+                    st.success("ยกเลิกคิวเรียบร้อย")
+
+                    st.rerun()
+
+            else:
+
+                st.info("ยังไม่มีการจอง")
+
 
 # ---------------- TODAY ----------------
 
@@ -284,6 +325,7 @@ else:
 
             st.dataframe(today_df)
 
+
 # ---------------- ADMIN ----------------
 
     if role == "admin":
@@ -294,6 +336,8 @@ else:
         )
 
         st.title("Admin Panel")
+
+# ---------------- DASHBOARD ----------------
 
         if menu == "Dashboard":
 
@@ -309,19 +353,48 @@ else:
 
             col3.metric("คิววันนี้", len(today_df))
 
+            st.divider()
+
+            st.subheader("📋 รายการจองทั้งหมด")
+
+            if not df.empty:
+
+                st.dataframe(df, use_container_width=True)
+
+            else:
+
+                st.info("ยังไม่มีข้อมูลการจอง")
+
+
 # ---------------- MANAGE BOOKINGS ----------------
 
         if menu == "จัดการการจอง":
 
             if not df.empty:
 
-                df.insert(0,"เลือก",False)
+                df.insert(0,"ลบ",False)
 
-                edited = st.data_editor(df)
+                edited = st.data_editor(df, num_rows="dynamic")
 
-                if st.button("ลบแถวที่เลือก"):
+                col1,col2 = st.columns(2)
 
-                    rows = edited[edited["เลือก"]==True]
+                if col1.button("💾 บันทึกการแก้ไข"):
+
+                    booking_sheet.clear()
+
+                    booking_sheet.append_row(list(edited.columns[1:]))
+
+                    for i,row in edited.iterrows():
+
+                        booking_sheet.append_row(row[1:].tolist())
+
+                    st.success("บันทึกข้อมูลสำเร็จ")
+
+                    st.rerun()
+
+                if col2.button("🗑 ลบแถวที่เลือก"):
+
+                    rows = edited[edited["ลบ"]==True]
 
                     for index in sorted(rows.index, reverse=True):
 
