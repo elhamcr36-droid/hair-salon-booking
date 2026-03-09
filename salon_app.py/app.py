@@ -4,7 +4,6 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
 import hashlib
-import plotly.express as px
 
 # ---------------- CONFIG ----------------
 
@@ -266,30 +265,11 @@ def my_queue():
                 cancel_booking(row["queue"])
 
                 st.success("ยกเลิกคิวแล้ว")
-
                 st.rerun()
 
     else:
 
         st.info("ยังไม่มีคิว")
-
-# ---------------- DASHBOARD ----------------
-
-def dashboard():
-
-    st.title("📊 Dashboard")
-
-    df = load_bookings()
-
-    if len(df) > 0:
-
-        service_count = df["service"].value_counts().reset_index()
-
-        service_count.columns = ["service","count"]
-
-        fig = px.bar(service_count,x="service",y="count")
-
-        st.plotly_chart(fig)
 
 # ---------------- ADMIN PANEL ----------------
 
@@ -329,8 +309,10 @@ def admin_panel():
 
         st.write("---")
 
+        phone = row.get("phone","ไม่มีข้อมูล")
+
         st.write("ลูกค้า:",row["user"])
-        st.write("เบอร์โทร:",row["phone"])
+        st.write("เบอร์โทร:",phone)
 
         service = st.selectbox(
             "บริการ",
@@ -373,19 +355,6 @@ def admin_panel():
             st.success("ลบคิวแล้ว")
             st.rerun()
 
-# ---------------- MAP ----------------
-
-def map_shop():
-
-    st.title("📍 แผนที่ร้าน")
-
-    df = pd.DataFrame({
-        "lat":[7.0084],
-        "lon":[100.4747]
-    })
-
-    st.map(df)
-
 # ---------------- MENU ----------------
 
 if st.session_state.login:
@@ -395,11 +364,9 @@ if st.session_state.login:
         menu = st.selectbox(
             "เมนู",
             [
-            "Dashboard",
             "จองคิว",
             "คิวของฉัน",
             "Admin Panel",
-            "แผนที่ร้าน",
             "Logout"
             ]
         )
@@ -415,10 +382,7 @@ if st.session_state.login:
             ]
         )
 
-    if menu == "Dashboard":
-        dashboard()
-
-    elif menu == "จองคิว":
+    if menu == "จองคิว":
         booking()
 
     elif menu == "คิวของฉัน":
@@ -426,9 +390,6 @@ if st.session_state.login:
 
     elif menu == "Admin Panel":
         admin_panel()
-
-    elif menu == "แผนที่ร้าน":
-        map_shop()
 
     elif menu == "Logout":
 
