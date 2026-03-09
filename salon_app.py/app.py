@@ -8,7 +8,7 @@ import plotly.express as px
 
 # ---------------- CONFIG ----------------
 
-SPREADSHEET_ID = "ใส่_SPREADSHEET_ID"
+SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
 
 scope = [
 "https://www.googleapis.com/auth/spreadsheets",
@@ -268,3 +268,4 @@ else:
 
         st.session_state.user = None
         st.rerun()
+
