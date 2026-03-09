@@ -9,7 +9,7 @@ import hashlib
 # Google Sheets Config
 # --------------------------
 
-SPREADSHEET_ID = "ใส่ไอดีชีทของคุณ"
+SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
 
 scope = [
 "https://www.googleapis.com/auth/spreadsheets",
@@ -306,3 +306,4 @@ else:
             else:
 
                 st.info("ยังไม่มีข้อมูล")
+
