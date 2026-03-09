@@ -222,6 +222,8 @@ else:
 
         st.title("ระบบจองคิวร้านทำผม")
 
+        # -------- จองคิว --------
+
         if menu == "จองคิว":
 
             name = st.text_input("ชื่อ")
@@ -280,7 +282,7 @@ else:
                 st.success("จองคิวสำเร็จ")
 
 
-# ---------------- MY QUEUE ----------------
+        # -------- คิวของฉัน --------
 
         if menu == "คิวของฉัน":
 
@@ -294,15 +296,17 @@ else:
 
                 my.insert(0,"ยกเลิก",False)
 
-                edited = st.data_editor(my)
+                show = my.drop(columns=["username"])
+
+                edited = st.data_editor(show)
 
                 if st.button("ยกเลิกคิวที่เลือก"):
 
                     cancel_rows = edited[edited["ยกเลิก"] == True]
 
-                    for index in sorted(cancel_rows["index"], reverse=True):
+                    for index in sorted(cancel_rows.index, reverse=True):
 
-                        booking_sheet.delete_rows(index+2)
+                        booking_sheet.delete_rows(my.loc[index,"index"]+2)
 
                     st.success("ยกเลิกคิวเรียบร้อย")
 
@@ -313,7 +317,7 @@ else:
                 st.info("ยังไม่มีการจอง")
 
 
-# ---------------- TODAY ----------------
+        # -------- คิววันนี้ --------
 
         if menu == "คิววันนี้":
 
@@ -323,7 +327,15 @@ else:
 
             st.subheader("คิววันนี้")
 
-            st.dataframe(today_df)
+            if not today_df.empty:
+
+                today_df = today_df.drop(columns=["username"])
+
+                st.dataframe(today_df, use_container_width=True)
+
+            else:
+
+                st.info("วันนี้ยังไม่มีคิว")
 
 
 # ---------------- ADMIN ----------------
@@ -337,7 +349,8 @@ else:
 
         st.title("Admin Panel")
 
-# ---------------- DASHBOARD ----------------
+
+        # -------- DASHBOARD --------
 
         if menu == "Dashboard":
 
@@ -366,7 +379,7 @@ else:
                 st.info("ยังไม่มีข้อมูลการจอง")
 
 
-# ---------------- MANAGE BOOKINGS ----------------
+        # -------- MANAGE BOOKINGS --------
 
         if menu == "จัดการการจอง":
 
