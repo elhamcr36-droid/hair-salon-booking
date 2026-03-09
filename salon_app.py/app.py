@@ -3,150 +3,306 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime, time
 import pandas as pd
+import hashlib
 
-# ==========================
-# ตั้งค่า Google Sheets
-# ==========================
-SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
+# --------------------------
+# Google Sheets Config
+# --------------------------
+
+SPREADSHEET_ID = "ใส่ไอดีชีทของคุณ"
 
 scope = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
+"https://www.googleapis.com/auth/spreadsheets",
+"https://www.googleapis.com/auth/drive"
 ]
 
 credentials = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=scope
+st.secrets["gcp_service_account"],
+scopes=scope
 )
 
 client = gspread.authorize(credentials)
-sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
-# ==========================
-# ตั้งค่าหน้าเว็บ
-# ==========================
-st.set_page_config(page_title="ระบบจองคิวร้านทำผม", page_icon="💇‍♀️")
-st.title("💇‍♀️ 222Salon")
+booking_sheet = client.open_by_key(SPREADSHEET_ID).worksheet("bookings")
+users_sheet = client.open_by_key(SPREADSHEET_ID).worksheet("users")
 
-menu = st.sidebar.selectbox(
-    "เมนู",
-    ["ลงชื่อจองคิว", "จัดการข้อมูลการจอง"]
-)
+# --------------------------
+# Page
+# --------------------------
 
-# ==========================
-# ฟังก์ชันช่วย
-# ==========================
-def get_data():
-    data = sheet.get_all_values()
+st.set_page_config(page_title="222Salon", page_icon="💇‍♀️")
+
+# --------------------------
+# Helper
+# --------------------------
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def get_bookings():
+    data = booking_sheet.get_all_values()
     if len(data) > 1:
         return pd.DataFrame(data[1:], columns=data[0])
     return pd.DataFrame()
 
-# ==========================
-# หน้า ลงชื่อจองคิว
-# ==========================
-if menu == "ลงชื่อจองคิว":
+def get_users():
+    data = users_sheet.get_all_values()
+    if len(data) > 1:
+        return pd.DataFrame(data[1:], columns=data[0])
+    return pd.DataFrame()
 
-    st.subheader("กรอกข้อมูลเพื่อจองคิว")
+# --------------------------
+# Session
+# --------------------------
 
-    name = st.text_input("ชื่อ")
-    phone = st.text_input("เบอร์โทร")
-    service = st.selectbox("บริการ", ["ตัดผม", "สระผม", "ทำสี", "ดัดผม"])
-    date = st.date_input("วันที่")
+if "login" not in st.session_state:
+    st.session_state.login = False
 
-    # จำกัดเวลา 08:30 - 17:30
-    booking_time = st.time_input(
-        "เวลา",
-        value=time(8,30)
+# --------------------------
+# LOGIN PAGE
+# --------------------------
+
+if not st.session_state.login:
+
+    menu = st.sidebar.selectbox(
+    "เมนู",
+    ["เข้าสู่ระบบ","สมัครสมาชิก"]
     )
 
-    detail = st.text_area("รายละเอียดเพิ่มเติม")
+    st.title("💇‍♀️ 222Salon")
 
-    if st.button("✅ ยืนยันการจอง"):
+    # ----------------------
+    # REGISTER
+    # ----------------------
 
-        if not name or not phone:
-            st.error("กรุณากรอกชื่อและเบอร์โทร")
-        elif booking_time < time(8,30) or booking_time > time(17,30):
-            st.error("เวลาจองต้องอยู่ระหว่าง 08:30 - 17:30")
-        else:
-            df = get_data()
+    if menu == "สมัครสมาชิก":
 
-            # ตรวจเวลาซ้ำ
-            if not df.empty:
-                duplicate = df[
-                    (df["วันที่"] == str(date)) &
-                    (df["เวลา"] == str(booking_time))
-                ]
+        st.subheader("สมัครสมาชิก")
 
-                if not duplicate.empty:
-                    st.error("❌ เวลานี้มีคนจองแล้ว กรุณาเลือกเวลาอื่น")
-                    st.stop()
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
 
-            sheet.append_row([
-                name,
-                phone,
-                service,
-                str(date),
-                str(booking_time),
-                detail,
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            ])
+        if st.button("สมัครสมาชิก"):
 
-            st.success("บันทึกการจองเรียบร้อยแล้ว ✅")
+            df = get_users()
 
-# ==========================
-# หน้า จัดการข้อมูล
-# ==========================
-elif menu == "จัดการข้อมูลการจอง":
+            if username in df["username"].values:
+                st.error("Username นี้มีแล้ว")
+            else:
+                users_sheet.append_row([
+                username,
+                hash_password(password)
+                ])
 
-    st.subheader("📋 จัดการข้อมูล")
+                st.success("สมัครสมาชิกสำเร็จ")
 
-    df = get_data()
+    # ----------------------
+    # LOGIN
+    # ----------------------
 
-    if not df.empty:
+    if menu == "เข้าสู่ระบบ":
 
-        df.insert(0, "เลือก", False)
+        st.subheader("เข้าสู่ระบบ")
 
-        edited_df = st.data_editor(df, use_container_width=True)
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
 
-        # ลบ
-        if st.button("🗑 ลบแถวที่เลือก"):
-            rows_to_delete = edited_df[edited_df["เลือก"] == True]
+        if st.button("Login"):
 
-            for index in sorted(rows_to_delete.index, reverse=True):
-                sheet.delete_rows(index + 2)
+            # ADMIN LOGIN
+            if username == "admin222" and password == "admin222":
 
-            st.success("ลบเรียบร้อยแล้ว ✅")
-            st.rerun()
+                st.session_state.login = True
+                st.session_state.role = "admin"
+                st.session_state.username = "admin"
 
-        # แก้ไข
-        selected = edited_df[edited_df["เลือก"] == True]
-
-        if len(selected) == 1:
-            index = selected.index[0]
-            row = df.iloc[index]
-
-            st.subheader("✏️ แก้ไขข้อมูล")
-
-            new_name = st.text_input("ชื่อ", row["ชื่อ"])
-            new_phone = st.text_input("เบอร์โทร", row["เบอร์โทร"])
-            new_service = st.text_input("บริการ", row["บริการ"])
-            new_date = st.text_input("วันที่", row["วันที่"])
-            new_time = st.text_input("เวลา", row["เวลา"])
-            new_detail = st.text_input("รายละเอียด", row["รายละเอียด"])
-
-            if st.button("💾 บันทึกการแก้ไข"):
-                sheet.update(
-                    f"A{index+2}:F{index+2}",
-                    [[new_name, new_phone, new_service, new_date, new_time, new_detail]]
-                )
-                st.success("แก้ไขเรียบร้อยแล้ว ✅")
                 st.rerun()
 
-    else:
-        st.info("ยังไม่มีข้อมูล")
+            df = get_users()
 
+            user = df[df["username"] == username]
 
+            if not user.empty:
 
+                stored_password = user.iloc[0]["password"]
 
+                if stored_password == hash_password(password):
 
+                    st.session_state.login = True
+                    st.session_state.role = "customer"
+                    st.session_state.username = username
+
+                    st.rerun()
+
+                else:
+                    st.error("รหัสผ่านผิด")
+
+            else:
+                st.error("ไม่พบผู้ใช้")
+
+# --------------------------
+# AFTER LOGIN
+# --------------------------
+
+else:
+
+    role = st.session_state.role
+    username = st.session_state.username
+
+    if st.sidebar.button("Logout"):
+        st.session_state.clear()
+        st.rerun()
+
+    df = get_bookings()
+
+# --------------------------
+# CUSTOMER PAGE
+# --------------------------
+
+    if role == "customer":
+
+        menu = st.sidebar.selectbox(
+        "เมนู",
+        ["จองคิว","คิวของฉัน","คิววันนี้"]
+        )
+
+        st.title("💇‍♀️ ระบบจองคิวร้านทำผม")
+
+        # ----------------------
+        # BOOKING
+        # ----------------------
+
+        if menu == "จองคิว":
+
+            name = st.text_input("ชื่อ")
+            phone = st.text_input("เบอร์โทร")
+
+            service = st.selectbox(
+            "บริการ",
+            ["ตัดผม","สระผม","ทำสี","ดัดผม"]
+            )
+
+            date = st.date_input("วันที่")
+
+            booking_time = st.time_input(
+            "เวลา",
+            value=time(8,30)
+            )
+
+            detail = st.text_area("รายละเอียด")
+
+            if st.button("ยืนยันการจอง"):
+
+                if booking_time < time(8,30) or booking_time > time(17,30):
+                    st.error("เวลาต้องอยู่ 08:30 - 17:30")
+
+                else:
+
+                    if not df.empty:
+
+                        duplicate = df[
+                        (df["วันที่"] == str(date)) &
+                        (df["เวลา"] == str(booking_time))
+                        ]
+
+                        if not duplicate.empty:
+                            st.error("เวลานี้มีคนจองแล้ว")
+                            st.stop()
+
+                    booking_sheet.append_row([
+
+                    username,
+                    name,
+                    phone,
+                    service,
+                    str(date),
+                    str(booking_time),
+                    detail,
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                    ])
+
+                    st.success("จองคิวสำเร็จ")
+
+        # ----------------------
+        # MY QUEUE
+        # ----------------------
+
+        if menu == "คิวของฉัน":
+
+            my = df[df["username"] == username]
+
+            st.subheader("คิวของฉัน")
+
+            st.dataframe(my)
+
+        # ----------------------
+        # TODAY
+        # ----------------------
+
+        if menu == "คิววันนี้":
+
+            today = datetime.today().strftime("%Y-%m-%d")
+
+            today_df = df[df["วันที่"] == today]
+
+            st.subheader("คิววันนี้")
+
+            st.dataframe(today_df)
+
+# --------------------------
+# ADMIN PAGE
+# --------------------------
+
+    if role == "admin":
+
+        menu = st.sidebar.selectbox(
+        "เมนู",
+        ["Dashboard","จัดการการจอง"]
+        )
+
+        st.title("👑 Admin Panel")
+
+        # ----------------------
+        # DASHBOARD
+        # ----------------------
+
+        if menu == "Dashboard":
+
+            col1,col2,col3 = st.columns(3)
+
+            col1.metric("การจองทั้งหมด", len(df))
+
+            col2.metric("ลูกค้า", len(get_users()))
+
+            today = datetime.today().strftime("%Y-%m-%d")
+
+            today_df = df[df["วันที่"] == today]
+
+            col3.metric("คิววันนี้", len(today_df))
+
+        # ----------------------
+        # MANAGE BOOKINGS
+        # ----------------------
+
+        if menu == "จัดการการจอง":
+
+            if not df.empty:
+
+                df.insert(0,"เลือก",False)
+
+                edited = st.data_editor(df)
+
+                if st.button("ลบแถวที่เลือก"):
+
+                    rows = edited[edited["เลือก"]==True]
+
+                    for index in sorted(rows.index, reverse=True):
+                        booking_sheet.delete_rows(index+2)
+
+                    st.success("ลบสำเร็จ")
+                    st.rerun()
+
+            else:
+
+                st.info("ยังไม่มีข้อมูล")
