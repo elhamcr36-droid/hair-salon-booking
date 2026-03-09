@@ -4,12 +4,11 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
 import hashlib
+import plotly.express as px
 
 # ---------------- CONFIG ----------------
 
 SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
-
-# ---------------- ADMIN ----------------
 
 ADMIN_USER = "admin222"
 ADMIN_PASS = "admin222"
@@ -27,7 +26,6 @@ scopes=scope
 )
 
 client = gspread.authorize(creds)
-
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
 
 # ---------------- CREATE SHEET ----------------
@@ -65,15 +63,11 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def load_users():
-
     data = sheet_users.get_all_records()
-
     return pd.DataFrame(data)
 
 def load_bookings():
-
     data = sheet_booking.get_all_records()
-
     return pd.DataFrame(data)
 
 def add_user(username,password,phone):
@@ -109,14 +103,12 @@ def add_booking(user,service,date,time):
 
     return True
 
-
 def cancel_booking(queue_id):
 
     cell = sheet_booking.find(str(queue_id))
 
     if cell:
         sheet_booking.delete_rows(cell.row)
-
 
 def update_booking(queue_id,service,date,time):
 
@@ -154,7 +146,6 @@ def login():
             st.session_state.user = ADMIN_USER
 
             st.success("Admin Login สำเร็จ")
-
             st.rerun()
 
         users = load_users()
@@ -172,7 +163,6 @@ def login():
                 st.session_state.user = username
 
                 st.success("Login สำเร็จ")
-
                 st.rerun()
 
         st.error("Username หรือ Password ไม่ถูกต้อง")
@@ -184,17 +174,14 @@ def register():
     st.title("📝 สมัครสมาชิก")
 
     username = st.text_input("Username")
-
     password = st.text_input("Password",type="password")
-
-    phone = st.text_input("เบอร์โทรศัพท์")
+    phone = st.text_input("เบอร์โทร")
 
     if st.button("Register"):
 
         if username == ADMIN_USER:
 
             st.error("ไม่สามารถใช้ชื่อนี้ได้")
-
             return
 
         if phone == "":
@@ -251,7 +238,6 @@ def booking():
 
         if success:
             st.success("จองคิวสำเร็จ")
-
         else:
             st.error("เวลานี้มีคนจองแล้ว")
 
@@ -287,6 +273,24 @@ def my_queue():
 
         st.info("ยังไม่มีคิว")
 
+# ---------------- DASHBOARD ----------------
+
+def dashboard():
+
+    st.title("📊 Dashboard")
+
+    df = load_bookings()
+
+    if len(df) > 0:
+
+        service_count = df["service"].value_counts().reset_index()
+
+        service_count.columns = ["service","count"]
+
+        fig = px.bar(service_count,x="service",y="count")
+
+        st.plotly_chart(fig)
+
 # ---------------- ADMIN PANEL ----------------
 
 def admin_panel():
@@ -297,36 +301,90 @@ def admin_panel():
     users = load_users()
 
     if len(df) == 0:
-
         st.info("ไม่มีข้อมูล")
-
         return
 
-    df = df.merge(users,on="username",how="left")
+    df = df.merge(
+        users,
+        left_on="user",
+        right_on="username",
+        how="left"
+    )
+
+    services = [
+    "ตัดผมชาย","ตัดผมหญิง","สระผม","ไดร์ผม",
+    "ย้อมผม","ดัดผม","ยืดผม","ทำสีแฟชั่น",
+    "ไฮไลท์ผม","ทรีทเมนต์","โกนหนวด",
+    "สปาผม","บำรุงเส้นผม","ซอยผม",
+    "ตัดหน้าม้า","ย้อมโคนผม"
+    ]
+
+    times = [
+    "10:00","11:00","12:00",
+    "13:00","14:00","15:00",
+    "16:00","17:00","18:00"
+    ]
 
     for i,row in df.iterrows():
 
         st.write("---")
 
         st.write("ลูกค้า:",row["user"])
-
         st.write("เบอร์โทร:",row["phone"])
 
-        st.write("บริการ:",row["service"])
+        service = st.selectbox(
+            "บริการ",
+            services,
+            index=services.index(row["service"]),
+            key="s"+str(row["queue"])
+        )
 
-        st.write("วัน:",row["date"])
+        date = st.date_input(
+            "วันที่",
+            pd.to_datetime(row["date"]),
+            key="d"+str(row["queue"])
+        )
 
-        st.write("เวลา:",row["time"])
+        time = st.selectbox(
+            "เวลา",
+            times,
+            index=times.index(row["time"]),
+            key="t"+str(row["queue"])
+        )
 
         col1,col2 = st.columns(2)
 
-        if col1.button("ลบ",key="del"+str(row["queue"])):
+        if col1.button("💾 บันทึก",key="save"+str(row["queue"])):
+
+            update_booking(
+                row["queue"],
+                service,
+                str(date),
+                time
+            )
+
+            st.success("แก้ไขคิวสำเร็จ")
+            st.rerun()
+
+        if col2.button("❌ ลบ",key="del"+str(row["queue"])):
 
             cancel_booking(row["queue"])
 
             st.success("ลบคิวแล้ว")
-
             st.rerun()
+
+# ---------------- MAP ----------------
+
+def map_shop():
+
+    st.title("📍 แผนที่ร้าน")
+
+    df = pd.DataFrame({
+        "lat":[7.0084],
+        "lon":[100.4747]
+    })
+
+    st.map(df)
 
 # ---------------- MENU ----------------
 
@@ -337,9 +395,11 @@ if st.session_state.login:
         menu = st.selectbox(
             "เมนู",
             [
+            "Dashboard",
             "จองคิว",
             "คิวของฉัน",
             "Admin Panel",
+            "แผนที่ร้าน",
             "Logout"
             ]
         )
@@ -355,7 +415,10 @@ if st.session_state.login:
             ]
         )
 
-    if menu == "จองคิว":
+    if menu == "Dashboard":
+        dashboard()
+
+    elif menu == "จองคิว":
         booking()
 
     elif menu == "คิวของฉัน":
@@ -364,20 +427,19 @@ if st.session_state.login:
     elif menu == "Admin Panel":
         admin_panel()
 
+    elif menu == "แผนที่ร้าน":
+        map_shop()
+
     elif menu == "Logout":
 
         st.session_state.login = False
-
         st.rerun()
 
 else:
 
     menu = st.selectbox(
         "เมนู",
-        [
-        "Login",
-        "Register"
-        ]
+        ["Login","Register"]
     )
 
     if menu == "Login":
