@@ -12,12 +12,12 @@ SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
 # ---------------- GOOGLE SHEET CONNECT ----------------
 
 scope = [
-    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = Credentials.from_service_account_file(
-    "credentials.json",
+creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
     scopes=scope
 )
 
@@ -46,6 +46,7 @@ def add_user(username, password):
     ])
 
 def add_booking(user, service, date, time):
+
     bookings = load_bookings()
 
     queue = len(bookings) + 1
@@ -86,8 +87,10 @@ def login():
             ]
 
             if not user.empty:
+
                 st.session_state.login = True
                 st.session_state.user = username
+
                 st.success("Login สำเร็จ")
                 st.rerun()
 
@@ -115,6 +118,7 @@ def booking():
     st.title("✂️ จองคิวทำผม")
 
     services = [
+
         "ตัดผมชาย",
         "ตัดผมหญิง",
         "สระผม",
@@ -123,10 +127,14 @@ def booking():
         "ดัดผม",
         "ยืดผม",
         "ทำสีแฟชั่น",
+        "ไฮไลท์ผม",
         "ทรีทเมนต์",
         "โกนหนวด",
         "สปาผม",
-        "บำรุงเส้นผม"
+        "บำรุงเส้นผม",
+        "ซอยผม",
+        "ตัดหน้าม้า",
+        "ย้อมโคนผม"
     ]
 
     service = st.selectbox("เลือกบริการ", services)
@@ -168,7 +176,12 @@ def queue():
     df = load_bookings()
 
     if len(df) > 0:
+
         st.dataframe(df)
+
+    else:
+
+        st.info("ยังไม่มีคิว")
 
 # ---------------- MAP ----------------
 
@@ -185,7 +198,7 @@ def map_shop():
 
     st.write("พิกัดร้าน: 7.0084 , 100.4747")
 
-# ---------------- MENU SIDEBAR ----------------
+# ---------------- SIDEBAR MENU ----------------
 
 if st.session_state.login:
 
@@ -211,13 +224,16 @@ if st.session_state.login:
         map_shop()
 
     elif menu == "Logout":
+
         st.session_state.login = False
         st.rerun()
 
 else:
 
+    st.sidebar.title("📋 Menu")
+
     menu = st.sidebar.selectbox(
-        "Menu",
+        "เลือกเมนู",
         [
             "Login",
             "Register"
@@ -229,4 +245,3 @@ else:
 
     else:
         register()
-
