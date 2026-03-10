@@ -6,8 +6,6 @@ from datetime import datetime
 import hashlib
 import plotly.express as px
 
-st.write(st.secrets)
-
 
 # ---------------- CONFIG ----------------
 
@@ -356,6 +354,7 @@ else:
         st.session_state.clear()
 
         st.rerun()
+
 
 
 
