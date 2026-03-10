@@ -6,44 +6,38 @@ from datetime import datetime
 import hashlib
 import plotly.express as px
 
-
-st.write("Connected:", sheet.title)
-
-SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
-
-sheet = client.open_by_key(SPREADSHEET_ID)
-sheet_users = sheet.worksheet("users")
-sheet_bookings = sheet.worksheet("bookings")
 # ---------------- CONFIG ----------------
 
 SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
 
 scope = [
-"https://spreadsheets.google.com/feeds",
-"https://www.googleapis.com/auth/drive"
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
 ]
 
 credentials = Credentials.from_service_account_info(
-st.secrets["gcp_service_account"],
-scopes=scope
+    dict(st.secrets["gcp_service_account"]),
+    scopes=scope
 )
 
 client = gspread.authorize(credentials)
 
-sheet_users = client.open_by_key(SPREADSHEET_ID).worksheet("users")
-sheet_bookings = client.open_by_key(SPREADSHEET_ID).worksheet("bookings")
+sheet = client.open_by_key(SPREADSHEET_ID)
+
+sheet_users = sheet.worksheet("users")
+sheet_bookings = sheet.worksheet("bookings")
 
 # ---------------- SERVICES ----------------
 
 services = {
-"Haircut":150,
-"Hair Wash":80,
-"Hair Color":500,
-"Hair Straightening":1000,
-"Hair Spa":600,
-"Beard Trim":120,
-"Head Massage":200,
-"Keratin Treatment":1500
+    "Haircut":150,
+    "Hair Wash":80,
+    "Hair Color":500,
+    "Hair Straightening":1000,
+    "Hair Spa":600,
+    "Beard Trim":120,
+    "Head Massage":200,
+    "Keratin Treatment":1500
 }
 
 timeslots = [
@@ -361,12 +355,3 @@ else:
         st.session_state.clear()
 
         st.rerun()
-
-
-
-
-
-
-
-
-
