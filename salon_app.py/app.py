@@ -6,7 +6,6 @@ from datetime import datetime
 # --- การตั้งค่าหน้าจอ ---
 st.set_page_config(page_title="Barber Pro Booking", layout="wide", initial_sidebar_state="collapsed")
 
-# ปรับแต่ง UI
 st.markdown("""
     <style>
         [data-testid="stSidebar"] {display: none;}
@@ -15,28 +14,26 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# เชื่อมต่อ Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# ฟังก์ชันอ่านข้อมูล (เน้นลบช่องว่างแฝง)
 def get_data(sheet_name):
     try:
         df = conn.read(worksheet=sheet_name, ttl=0)
-        # 1. ลบช่องว่างที่ชื่อคอลัมน์ (หัวตาราง)
         df.columns = [str(c).strip() for c in df.columns]
-        # 2. แปลงทุกอย่างเป็น String และลบช่องว่างในข้อมูล
-        df = df.fillna("").astype(str)
-        for col in df.columns:
-            df[col] = df[col].str.strip()
-        return df
-    except Exception as e:
-        st.error(f"❌ การเชื่อมต่อผิดพลาด: {e}")
-        return pd.DataFrame()
+        # ฟังก์ชันพิเศษ: ล้างช่องว่าง และ ล้าง .0 ที่เกิดจากตัวเลขทศนิยม
+        def clean_val(v):
+            v = str(v).strip()
+            if v.endswith('.0'): v = v[:-2]
+            return v
+        return df.fillna("").applyview(lambda x: x.map(clean_val)) if hasattr(df, 'applymap') else df.fillna("").apply(lambda x: x.map(clean_val))
+    except:
+        # กรณี pandas version ใหม่ใช้ map แทน applymap
+        df = conn.read(worksheet=sheet_name, ttl=0)
+        df.columns = [str(c).strip() for c in df.columns]
+        return df.fillna("").map(lambda x: str(x).strip().replace('.0', '') if str(x).endswith('.0') else str(x).strip())
 
-# --- ข้อมูลบริการ ---
 SERVICES = {"ตัดผมชาย": 150, "ตัดผมหญิง": 300, "สระ-ไดร์": 150, "ทำสีผม": 1200}
 
-# --- ระบบ Navigation ---
 if 'page' not in st.session_state: st.session_state.page = "Home"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
@@ -44,7 +41,6 @@ def navigate(p):
     st.session_state.page = p
     st.rerun()
 
-# --- เมนูหลักด้านบน ---
 st.markdown("<h1 class='main-header'>✂️ Barber & Salon Online</h1>", unsafe_allow_html=True)
 c1, c2, c3, c4, c5 = st.columns(5)
 with c1: 
@@ -69,10 +65,9 @@ else:
 
 st.divider()
 
-# --- หน้าต่างๆ ---
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800")
-    st.info("ยินดีต้อนรับสู่ร้านตัดผมออนไลน์! กรุณาเข้าสู่ระบบเพื่อจองคิว")
+    st.info("ยินดีต้อนรับ! กรุณาเข้าสู่ระบบเพื่อจองคิว")
 
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 คิววันนี้")
@@ -108,7 +103,7 @@ elif st.session_state.page == "Register":
             df_u = get_data("Users")
             if nu.strip() in df_u['username'].values: st.error("ชื่อนี้มีคนใช้แล้ว")
             else:
-                new_u = pd.DataFrame([{"username":nu.strip(), "password":np.strip(), "phone":nt, "role":"user"}])
+                new_u = pd.DataFrame([{"username":nu.strip(), "password":np.strip(), "phone":nt.strip(), "role":"user"}])
                 conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
                 st.success("สำเร็จ!")
 
