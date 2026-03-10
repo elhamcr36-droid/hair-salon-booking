@@ -11,28 +11,42 @@ st.markdown("""
         [data-testid="stSidebar"] {display: none;}
         .stButton>button {width: 100%; border-radius: 10px; height: 3.5em; font-weight: bold;}
         .main-header {text-align: center; color: #FF4B4B; margin-bottom: 20px;}
+        .price-card {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid #FF4B4B;
+            margin-bottom: 10px;
+        }
     </style>
 """, unsafe_allow_html=True)
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# --- ข้อมูลบริการ (คุณสามารถปรับช่วงราคาตรงนี้ได้เลย) ---
+SERVICES_PRICE_RANGE = {
+    "ตัดผมชาย": "150 - 250",
+    "ตัดผมหญิง": "300 - 600",
+    "สระ-ไดร์": "150 - 300",
+    "ทำสีผม": "1,200 - 3,500",
+    "ดัดผม / ยืดผม": "1,500 - 4,000",
+    "ทรีทเม้นท์บำรุงผม": "500 - 1,500"
+}
+
+# สำหรับใช้ในระบบจอง (ราคาเริ่มต้น)
+SERVICES = {"ตัดผมชาย": 150, "ตัดผมหญิง": 300, "สระ-ไดร์": 150, "ทำสีผม": 1200}
+
 def get_data(sheet_name):
     try:
         df = conn.read(worksheet=sheet_name, ttl=0)
         df.columns = [str(c).strip() for c in df.columns]
-        # ฟังก์ชันพิเศษ: ล้างช่องว่าง และ ล้าง .0 ที่เกิดจากตัวเลขทศนิยม
         def clean_val(v):
             v = str(v).strip()
             if v.endswith('.0'): v = v[:-2]
             return v
-        return df.fillna("").applyview(lambda x: x.map(clean_val)) if hasattr(df, 'applymap') else df.fillna("").apply(lambda x: x.map(clean_val))
+        return df.fillna("").map(clean_val)
     except:
-        # กรณี pandas version ใหม่ใช้ map แทน applymap
-        df = conn.read(worksheet=sheet_name, ttl=0)
-        df.columns = [str(c).strip() for c in df.columns]
-        return df.fillna("").map(lambda x: str(x).strip().replace('.0', '') if str(x).endswith('.0') else str(x).strip())
-
-SERVICES = {"ตัดผมชาย": 150, "ตัดผมหญิง": 300, "สระ-ไดร์": 150, "ทำสีผม": 1200}
+        return pd.DataFrame()
 
 if 'page' not in st.session_state: st.session_state.page = "Home"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
@@ -65,10 +79,32 @@ else:
 
 st.divider()
 
+# --- 1. หน้าแรก (เพิ่มส่วนแสดงราคา) ---
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800")
-    st.info("ยินดีต้อนรับ! กรุณาเข้าสู่ระบบเพื่อจองคิว")
+    
+    st.subheader("💰 อัตราค่าบริการ (เริ่มต้น - สูงสุด)")
+    
+    # แสดงราคาเป็น 2 คอลัมน์
+    p_col1, p_col2 = st.columns(2)
+    items = list(SERVICES_PRICE_RANGE.items())
+    
+    for i, (name, price) in enumerate(items):
+        target_col = p_col1 if i % 2 == 0 else p_col2
+        with target_col:
+            st.markdown(f"""
+                <div class="price-card">
+                    <span style="font-weight: bold; font-size: 18px;">{name}</span><br>
+                    <span style="color: #FF4B4B; font-size: 20px;">{price} บาท</span>
+                </div>
+            """, unsafe_allow_html=True)
+            
+    st.divider()
+    st.subheader("📍 พิกัดร้านและนำทาง")
+    map_url = "https://www.google.com/maps" 
+    st.markdown(f'<a href="{map_url}" target="_blank"><button style="width:100%; background-color:#FF4B4B; color:white; padding:15px; border-radius:10px; border:none; cursor:pointer; font-size:16px;">🛰️ เปิด Google Maps นำทางมาที่ร้าน</button></a>', unsafe_allow_html=True)
 
+# --- หน้าอื่นๆ (คงเดิม) ---
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 คิววันนี้")
     df_b = get_data("Bookings")
