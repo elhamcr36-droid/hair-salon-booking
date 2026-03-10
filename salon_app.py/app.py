@@ -1,3 +1,4 @@
+st.write(st.secrets)
 import streamlit as st
 import pandas as pd
 import gspread
@@ -353,4 +354,5 @@ else:
         st.session_state.clear()
 
         st.rerun()
+
 
