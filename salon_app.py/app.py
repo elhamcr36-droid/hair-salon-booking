@@ -8,7 +8,7 @@ import plotly.express as px
 
 # ---------------- CONFIG ----------------
 
-SPREADSHEET_ID = "YOUR_SPREADSHEET_ID"
+SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
 
 scope = [
 "https://spreadsheets.google.com/feeds",
@@ -353,3 +353,4 @@ else:
         st.session_state.clear()
 
         st.rerun()
+
