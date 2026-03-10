@@ -3,6 +3,11 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
+if "connections" not in st.secrets:
+    st.error("❌ หาการตั้งค่า connections ใน Secrets ไม่เจอ!")
+else:
+    st.success("✅ ตรวจพบการตั้งค่า Secrets เรียบร้อย")
+
 # --- การตั้งค่าหน้าจอ ---
 st.set_page_config(page_title="Barber Pro Booking", layout="wide", initial_sidebar_state="collapsed")
 
@@ -183,3 +188,4 @@ elif st.session_state.page == "Admin":
         df_b.loc[df_b['id'] == edit_id, 'status'] = 'เสร็จสิ้น'
         conn.update(worksheet="Bookings", data=df_b)
         st.rerun()
+
