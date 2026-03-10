@@ -6,7 +6,8 @@ from datetime import datetime
 import hashlib
 import plotly.express as px
 
-
+sheet = client.open_by_key(SPREADSHEET_ID)
+st.write(sheet.title)
 # ---------------- CONFIG ----------------
 
 SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
@@ -354,6 +355,7 @@ else:
         st.session_state.clear()
 
         st.rerun()
+
 
 
 
