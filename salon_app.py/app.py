@@ -54,7 +54,7 @@ def navigate(p):
     st.session_state.page = p
     st.rerun()
 
-st.markdown("<h1 class='main-header'>✂️ 222-Salon Online</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-header'>✂️ 222-Salon </h1>", unsafe_allow_html=True)
 m_cols = st.columns(5)
 with m_cols[0]: 
     if st.button("🏠 หน้าแรก"): navigate("Home")
@@ -206,3 +206,4 @@ elif st.session_state.page == "Register":
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 คิววันนี้")
     st.dataframe(get_data("Bookings"), use_container_width=True)
+
