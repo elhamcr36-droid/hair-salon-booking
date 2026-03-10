@@ -6,8 +6,11 @@ from datetime import datetime
 import hashlib
 import plotly.express as px
 
-sheet = client.open_by_key("1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k")
-st.write(sheet.title)
+SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
+
+sheet = client.open_by_key(SPREADSHEET_ID)
+sheet_users = sheet.worksheet("users")
+sheet_bookings = sheet.worksheet("bookings")
 # ---------------- CONFIG ----------------
 
 SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
@@ -355,6 +358,7 @@ else:
         st.session_state.clear()
 
         st.rerun()
+
 
 
 
