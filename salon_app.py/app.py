@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# --- 1. การตั้งค่าหน้าจอและสไตล์ (แก้ไขสีตัวอักษรให้เห็นชัดเจน) ---
+# --- 1. การตั้งค่าหน้าจอและสไตล์ (UI/UX) ---
 st.set_page_config(page_title="222-Salon", layout="wide", initial_sidebar_state="collapsed")
 
 # 📍 เปลี่ยนลิงก์ GPS ร้านคุณที่นี่
@@ -11,41 +11,41 @@ SHOP_LOCATION_URL = "https://maps.google.com"
 
 st.markdown("""
     <style>
+        /* ซ่อน Sidebar และปรับแต่งปุ่ม */
         [data-testid="stSidebar"] {display: none;}
         .stButton>button {width: 100%; border-radius: 10px; font-weight: bold; transition: 0.3s;}
-        .stButton>button:hover {background-color: #FF4B4B; color: white;}
+        .stButton>button:hover {background-color: #FF4B4B; color: white; border-color: #FF4B4B;}
         .main-header {text-align: center; color: #FF4B4B; margin-bottom: 20px;}
         
-        /* แก้ไข Price Card ให้เห็นตัวหนังสือชัดเจนทุกโหมด */
+        /* แก้ไข Price Card ให้เห็นตัวหนังสือชัดเจน (Fix Invisible Text) */
         .price-card {
             background-color: #ffffff !important; 
-            padding: 18px; 
+            padding: 20px; 
             border-radius: 15px;
             border-left: 8px solid #FF4B4B; 
-            margin-bottom: 12px;
-            box-shadow: 2px 4px 12px rgba(0,0,0,0.1);
-            color: #1E1E1E !important; /* บังคับสีตัวอักษรเข้ม */
+            margin-bottom: 15px;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.1);
+            color: #1A1A1A !important; /* บังคับสีตัวอักษรเข้ม */
         }
         .price-card b {
             color: #000000 !important;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
         }
         .price-text {
             color: #FF4B4B !important;
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 1.1rem;
         }
 
-        /* สไตล์ Dashboard หลังบ้าน */
+        /* สไตล์ Dashboard สำหรับแอดมิน */
         .metric-container {
             background-color: #ffffff; padding: 25px; border-radius: 20px;
             border: 2px solid #FF4B4B; text-align: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            color: #333 !important;
         }
-        .metric-title { font-size: 18px; color: #555 !important; margin-bottom: 10px; font-weight: bold; }
+        .metric-title { font-size: 18px; color: #555 !important; font-weight: bold; }
         .metric-value { font-size: 38px; color: #FF4B4B !important; font-weight: 900; }
     </style>
 """, unsafe_allow_html=True)
@@ -67,7 +67,15 @@ def get_data(sheet_name):
         df = conn.read(worksheet=sheet_name, ttl=0)
         df = df.dropna(how='all')
         df.columns = [str(c).strip() for c in df.columns]
-        return df.fillna("").map(lambda x: str(x).replace('.0', '') if isinstance(x, (float, int)) else str(x))
+        
+        # ล้างข้อมูลเบื้องต้น (จัดการเลข .0)
+        df = df.fillna("").map(lambda x: str(x).replace('.0', '') if isinstance(x, (float, int)) else str(x))
+        
+        # 📍 แก้ไขเบอร์โทรศัพท์ (Fix Leading Zero)
+        if 'phone' in df.columns:
+            df['phone'] = df['phone'].apply(lambda x: str(x).strip().zfill(10) if x and x != "" else "")
+            
+        return df
     except: 
         return pd.DataFrame()
 
@@ -102,7 +110,7 @@ else:
 
 st.divider()
 
-# --- 4. หน้าแอดมิน (Admin) ---
+# --- 4. หน้าแอดมิน (Admin Dashboard) ---
 if st.session_state.page == "Admin":
     st.subheader("📊 ระบบจัดการร้านและสรุปยอดรายวัน")
     df_b = get_data("Bookings")
@@ -113,22 +121,23 @@ if st.session_state.page == "Admin":
         df_today = df_b[df_b['date'] == today_str]
         
         daily_rev = pd.to_numeric(df_today['price'], errors='coerce').sum()
-        daily_cust = len(df_today)
         
-        c_m1, c_m2, c_m3 = st.columns(3)
-        with c_m1: st.markdown(f"<div class='metric-container'><div class='metric-title'>💰 ยอดขายวันนี้</div><div class='metric-value'>{daily_rev:,.0f} ฿</div></div>", unsafe_allow_html=True)
-        with c_m2: st.markdown(f"<div class='metric-container'><div class='metric-title'>👥 ลูกค้าวันนี้</div><div class='metric-value'>{daily_cust} ท่าน</div></div>", unsafe_allow_html=True)
-        with c_m3: st.markdown(f"<div class='metric-container'><div class='metric-title'>📅 วันที่</div><div class='metric-value'>{today_str}</div></div>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        with c1: st.markdown(f"<div class='metric-container'><div class='metric-title'>💰 ยอดขายวันนี้</div><div class='metric-value'>{daily_rev:,.0f} ฿</div></div>", unsafe_allow_html=True)
+        with c2: st.markdown(f"<div class='metric-container'><div class='metric-title'>👥 ลูกค้าวันนี้</div><div class='metric-value'>{len(df_today)} ท่าน</div></div>", unsafe_allow_html=True)
+        with c3: st.markdown(f"<div class='metric-container'><div class='metric-title'>📅 วันที่</div><div class='metric-value'>{today_str}</div></div>", unsafe_allow_html=True)
         
         st.divider()
+        # รวมข้อมูลจองกับข้อมูลลูกค้าเพื่อดูชื่อจริงและเบอร์โทร
         df_admin = pd.merge(df_b, df_u[['username', 'fullname', 'phone']], on='username', how='left')
         
-        # แสดงตารางจัดการคิว
         for _, row in df_admin.sort_values(['date','time'], ascending=[False, True]).iterrows():
-            with st.expander(f"⏰ {row['time']} | {row['fullname']} - {row['service']} ({row['status']})"):
+            status_color = "🟢" if row['status'] == 'เสร็จสิ้น' else "🔵"
+            with st.expander(f"{status_color} ⏰ {row['time']} | {row['fullname']} - {row['service']}"):
                 col_a, col_b, col_c = st.columns(3)
-                col_a.write(f"📞 เบอร์โทร: {row['phone']}")
+                col_a.markdown(f"📞 **เบอร์โทร:** {row['phone']}")
                 col_b.write(f"📅 วันที่: {row['date']}")
+                
                 if row['status'] == 'รอรับบริการ':
                     if col_c.button("✅ เสร็จสิ้นคิวนี้", key=f"ok_{row['id']}"):
                         df_b.loc[df_b['id'] == row['id'], 'status'] = 'เสร็จสิ้น'
@@ -156,14 +165,15 @@ elif st.session_state.page == "Booking":
             booked_now = len(df_b[(df_b['date'] == str(d)) & (df_b['time'] == t) & (df_b['status'] == 'รอรับบริการ')])
             
             if not user_booked.empty:
-                st.error(f"❌ คุณมีคิวที่ยังไม่สำเร็จในวันที่ {d} แล้ว")
+                st.error(f"❌ คุณมีคิวจองในวันที่ {d} อยู่แล้ว (จำกัด 1 คิว/วัน)")
             elif booked_now >= 2:
-                st.error(f"❌ ขออภัยครับ เวลานี้ ({t}) มีลูกค้าจองครบ 2 ท่านแล้ว")
+                st.error(f"❌ เวลานี้ ({t}) เต็มแล้ว (พนักงาน 2 ท่าน)")
             else:
                 new_id = str(int(datetime.now().timestamp()))
                 new_r = pd.DataFrame([{"id":new_id, "username":st.session_state.username, "service":svc, "date":str(d), "time":t, "price":str(SERVICES_BASE_PRICE[svc]), "status":"รอรับบริการ"}])
                 conn.update(worksheet="Bookings", data=pd.concat([df_b, new_r], ignore_index=True))
-                st.success("✅ จองคิวสำเร็จ! ขอบคุณที่ใช้บริการครับ")
+                st.success("✅ จองคิวสำเร็จ!")
+                st.rerun()
     with t2:
         df_b = get_data("Bookings")
         my_q = df_b[df_b['username'] == st.session_state.username].sort_values('date', ascending=False)
@@ -173,10 +183,10 @@ elif st.session_state.page == "Booking":
 elif st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     c_i1, c_i2 = st.columns(2)
-    c_i1.info("⏰ เวลาทำการ: 09:30 - 19:30 น. (หยุดวันพุธ)")
+    c_i1.info("⏰ 09:30 - 19:30 น. (หยุดวันพุธ)")
     c_i2.link_button("📍 นำทางไปยังร้าน (GPS)", SHOP_LOCATION_URL, type="primary")
     
-    st.subheader("📋 บริการและราคา")
+    st.subheader("📋 บริการและราคาเริ่มต้น")
     p_col1, p_col2 = st.columns(2)
     for i, (name, price) in enumerate(SERVICES_DISPLAY.items()):
         target = p_col1 if i % 2 == 0 else p_col2
@@ -187,42 +197,38 @@ elif st.session_state.page == "Home":
             </div>
         ''', unsafe_allow_html=True)
 
-# --- 7. สมัครสมาชิก & เข้าสู่ระบบ ---
+# --- 7. หน้าสมัครสมาชิกและล็อกอิน ---
 elif st.session_state.page == "Register":
-    st.subheader("📝 สมัครสมาชิกใหม่")
-    with st.form("reg_form"):
+    st.subheader("📝 สมัครสมาชิก")
+    with st.form("reg"):
         nu, np = st.text_input("Username"), st.text_input("Password", type="password")
         nf, nt = st.text_input("ชื่อ-นามสกุล"), st.text_input("เบอร์โทรศัพท์")
-        if st.form_submit_button("ยืนยันการสมัคร"):
+        if st.form_submit_button("สมัครสมาชิก"):
             if nu and np and nf and nt:
                 df_u = get_data("Users")
-                if nu in df_u['username'].values: st.error("❌ ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว")
+                if nu in df_u['username'].values: st.error("❌ Username นี้มีผู้ใช้แล้ว")
                 else:
                     new_u = pd.DataFrame([{"username":nu, "password":np, "fullname":nf, "phone":nt, "role":"user"}])
                     conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
-                    st.success("✅ สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ")
-            else: st.warning("⚠️ กรุณากรอกข้อมูลให้ครบถ้วน")
+                    st.success("✅ สมัครสำเร็จ! กรุณาเข้าสู่ระบบ")
+            else: st.warning("⚠️ กรุณากรอกข้อมูลให้ครบ")
 
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
     u = st.text_input("Username")
     p = st.text_input("Password", type="password")
-    if st.button("Login"):
+    if st.button("เข้าสู่ระบบ"):
         if u == "admin222" and p == "222":
-            st.session_state.update({'logged_in':True, 'user_role':'admin', 'username':'Admin', 'fullname':'ผู้จัดการร้าน'}); navigate("Admin")
+            st.session_state.update({'logged_in':True, 'user_role':'admin', 'username':'Admin'}); navigate("Admin")
         else:
             df_u = get_data("Users")
             user = df_u[(df_u['username'] == u) & (df_u['password'] == p)]
             if not user.empty:
                 st.session_state.update({'logged_in':True, 'user_role':'user', 'username':u, 'fullname':user.iloc[0]['fullname']}); navigate("Booking")
-            else: st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+            else: st.error("❌ ข้อมูลไม่ถูกต้อง")
 
 elif st.session_state.page == "ViewQueues":
-    st.subheader("📅 รายการคิววันนี้")
+    st.subheader("📅 คิววันนี้ (จำกัดช่วงละ 2 ท่าน)")
     df_b = get_data("Bookings")
-    today = str(datetime.now().date())
-    active = df_b[(df_b['date'] == today) & (df_b['status'] == 'รอรับบริการ')]
-    if not active.empty:
-        st.dataframe(active[['time', 'service']].sort_values('time'), use_container_width=True)
-    else:
-        st.write("ยังไม่มีคิวการจองสำหรับวันนี้")
+    active = df_b[(df_b['date'] == str(datetime.now().date())) & (df_b['status'] == 'รอรับบริการ')]
+    st.dataframe(active[['time', 'service']].sort_values('time'), use_container_width=True)
