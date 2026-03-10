@@ -5,6 +5,16 @@ import pandas as pd
 from datetime import datetime
 import hashlib
 
+# ---------------- PAGE CONFIG ----------------
+
+st.set_page_config(
+    page_title="Smart Salon Booking",
+    page_icon="✂️",
+    layout="centered"
+)
+
+st.title("✂️ Smart Salon Booking System")
+
 # ---------------- CONFIG ----------------
 
 SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
@@ -46,6 +56,7 @@ def get_or_create_sheet(name, headers):
 
     return sheet
 
+
 sheet_users = get_or_create_sheet(
 "users",
 ["username","password","phone"]
@@ -69,6 +80,23 @@ def load_bookings():
     data = sheet_booking.get_all_records()
     return pd.DataFrame(data)
 
+# ---------------- QUEUE GENERATOR ----------------
+
+def generate_queue():
+
+    df = load_bookings()
+
+    if len(df) == 0:
+        return "Q001"
+
+    last = df.iloc[-1]["queue"]
+
+    num = int(last.replace("Q","")) + 1
+
+    return "Q"+str(num).zfill(3)
+
+# ---------------- ADD USER ----------------
+
 def add_user(username,password,phone):
 
     sheet_users.append_row([
@@ -76,6 +104,8 @@ def add_user(username,password,phone):
         hash_password(password),
         phone
     ])
+
+# ---------------- ADD BOOKING ----------------
 
 def add_booking(user,service,date,time):
 
@@ -89,7 +119,7 @@ def add_booking(user,service,date,time):
     if len(same) > 0:
         return False
 
-    queue = len(bookings) + 1
+    queue = generate_queue()
 
     sheet_booking.append_row([
         queue,
@@ -102,16 +132,31 @@ def add_booking(user,service,date,time):
 
     return True
 
+# ---------------- CANCEL ----------------
+
 def cancel_booking(queue_id):
 
-    cell = sheet_booking.find(str(queue_id))
+    cell = sheet_booking.find(queue_id)
 
     if cell:
         sheet_booking.delete_rows(cell.row)
 
+# ---------------- UPDATE ----------------
+
 def update_booking(queue_id,service,date,time):
 
-    cell = sheet_booking.find(str(queue_id))
+    bookings = load_bookings()
+
+    same = bookings[
+        (bookings["date"] == date) &
+        (bookings["time"] == time) &
+        (bookings["queue"] != queue_id)
+    ]
+
+    if len(same) > 0:
+        return False
+
+    cell = sheet_booking.find(queue_id)
 
     if cell:
 
@@ -120,6 +165,8 @@ def update_booking(queue_id,service,date,time):
         sheet_booking.update_cell(row,3,service)
         sheet_booking.update_cell(row,4,date)
         sheet_booking.update_cell(row,5,time)
+
+    return True
 
 # ---------------- SESSION ----------------
 
@@ -132,7 +179,7 @@ if "login" not in st.session_state:
 
 def login():
 
-    st.title("🔐 Login")
+    st.subheader("🔐 Login")
 
     username = st.text_input("Username")
     password = st.text_input("Password",type="password")
@@ -170,7 +217,7 @@ def login():
 
 def register():
 
-    st.title("📝 สมัครสมาชิก")
+    st.subheader("📝 สมัครสมาชิก")
 
     username = st.text_input("Username")
     password = st.text_input("Password",type="password")
@@ -189,7 +236,7 @@ def register():
 
         users = load_users()
 
-        if username in users["username"].values:
+        if len(users) > 0 and username in users["username"].values:
 
             st.error("Username นี้มีแล้ว")
 
@@ -203,19 +250,27 @@ def register():
 
 def booking():
 
-    st.title("✂️ จองคิวทำผม")
+    st.subheader("✂️ จองคิวทำผม")
 
     services = [
+
     "ตัดผมชาย","ตัดผมหญิง","สระผม","ไดร์ผม",
     "ย้อมผม","ดัดผม","ยืดผม","ทำสีแฟชั่น",
-    "ไฮไลท์ผม","ทรีทเมนต์","โกนหนวด",
+    "ไฮไลท์","ทรีทเมนต์","โกนหนวด",
     "สปาผม","บำรุงเส้นผม","ซอยผม",
-    "ตัดหน้าม้า","ย้อมโคนผม"
+    "ตัดหน้าม้า","ย้อมโคนผม",
+    "ทำสีผมแฟชั่น","ดัดวอลลุ่ม",
+    "ทรีทเมนต์เคราติน","รีบอนดิ้ง",
+    "สปาหนังศีรษะ","ย้อมผมเทา"
     ]
 
     service = st.selectbox("เลือกบริการ",services)
 
     date = st.date_input("เลือกวันที่")
+
+    if date < datetime.today().date():
+        st.error("ไม่สามารถจองวันย้อนหลังได้")
+        return
 
     time = st.selectbox(
         "เลือกเวลา",
@@ -244,7 +299,7 @@ def booking():
 
 def my_queue():
 
-    st.title("📅 คิวของฉัน")
+    st.subheader("📅 คิวของฉัน")
 
     df = load_bookings()
 
@@ -254,13 +309,14 @@ def my_queue():
 
         for i,row in df.iterrows():
 
-            col1,col2,col3,col4 = st.columns(4)
+            st.write("---")
 
-            col1.write(row["service"])
-            col2.write(row["date"])
-            col3.write(row["time"])
+            st.write("เลขคิว:",row["queue"])
+            st.write("บริการ:",row["service"])
+            st.write("วันที่:",row["date"])
+            st.write("เวลา:",row["time"])
 
-            if col4.button("ยกเลิก",key=row["queue"]):
+            if st.button("❌ ยกเลิก",key=row["queue"]):
 
                 cancel_booking(row["queue"])
 
@@ -271,11 +327,11 @@ def my_queue():
 
         st.info("ยังไม่มีคิว")
 
-# ---------------- ADMIN PANEL ----------------
+# ---------------- ADMIN ----------------
 
 def admin_panel():
 
-    st.title("🛠 Admin Panel")
+    st.subheader("🛠 Admin Panel")
 
     df = load_bookings()
     users = load_users()
@@ -291,69 +347,38 @@ def admin_panel():
         how="left"
     )
 
-    services = [
-    "ตัดผมชาย","ตัดผมหญิง","สระผม","ไดร์ผม",
-    "ย้อมผม","ดัดผม","ยืดผม","ทำสีแฟชั่น",
-    "ไฮไลท์ผม","ทรีทเมนต์","โกนหนวด",
-    "สปาผม","บำรุงเส้นผม","ซอยผม",
-    "ตัดหน้าม้า","ย้อมโคนผม"
-    ]
-
-    times = [
-    "10:00","11:00","12:00",
-    "13:00","14:00","15:00",
-    "16:00","17:00","18:00"
-    ]
-
     for i,row in df.iterrows():
 
         st.write("---")
 
-        phone = row.get("phone","ไม่มีข้อมูล")
-
+        st.write("เลขคิว:",row["queue"])
         st.write("ลูกค้า:",row["user"])
-        st.write("เบอร์โทร:",phone)
-
-        service = st.selectbox(
-            "บริการ",
-            services,
-            index=services.index(row["service"]),
-            key="s"+str(row["queue"])
-        )
-
-        date = st.date_input(
-            "วันที่",
-            pd.to_datetime(row["date"]),
-            key="d"+str(row["queue"])
-        )
-
-        time = st.selectbox(
-            "เวลา",
-            times,
-            index=times.index(row["time"]),
-            key="t"+str(row["queue"])
-        )
+        st.write("เบอร์โทร:",row.get("phone","ไม่มี"))
 
         col1,col2 = st.columns(2)
 
-        if col1.button("💾 บันทึก",key="save"+str(row["queue"])):
-
-            update_booking(
-                row["queue"],
-                service,
-                str(date),
-                time
-            )
-
-            st.success("แก้ไขคิวสำเร็จ")
-            st.rerun()
-
-        if col2.button("❌ ลบ",key="del"+str(row["queue"])):
+        if col1.button("ลบ",key="del"+row["queue"]):
 
             cancel_booking(row["queue"])
-
             st.success("ลบคิวแล้ว")
             st.rerun()
+
+# ---------------- SHOP INFO ----------------
+
+def shop_info():
+
+    st.subheader("🏪 ข้อมูลร้าน")
+
+    st.write("📍 ร้าน Smart Salon")
+    st.write("Songkhla Thailand")
+
+    st.write("⏰ เวลาเปิด")
+    st.write("10:00 - 19:00")
+
+    st.map(pd.DataFrame({
+        'lat':[7.1897],
+        'lon':[100.5951]
+    }))
 
 # ---------------- MENU ----------------
 
@@ -361,23 +386,25 @@ if st.session_state.login:
 
     if st.session_state.user == ADMIN_USER:
 
-        menu = st.selectbox(
+        menu = st.sidebar.selectbox(
             "เมนู",
             [
             "จองคิว",
             "คิวของฉัน",
             "Admin Panel",
+            "ข้อมูลร้าน",
             "Logout"
             ]
         )
 
     else:
 
-        menu = st.selectbox(
+        menu = st.sidebar.selectbox(
             "เมนู",
             [
             "จองคิว",
             "คิวของฉัน",
+            "ข้อมูลร้าน",
             "Logout"
             ]
         )
@@ -390,6 +417,9 @@ if st.session_state.login:
 
     elif menu == "Admin Panel":
         admin_panel()
+
+    elif menu == "ข้อมูลร้าน":
+        shop_info()
 
     elif menu == "Logout":
 
