@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# --- 1. SETTINGS & UI STYLE (แก้ไขพื้นหลังขาวออก) ---
+# --- 1. SETTINGS & UI STYLE (ลบพื้นหลังขาวออกทั้งหมด) ---
 st.set_page_config(page_title="222-Salon", layout="wide", initial_sidebar_state="collapsed")
 
 # 📍 ข้อมูลติดต่อ
@@ -19,37 +19,30 @@ st.markdown(f"""
         .stButton>button:hover {{background-color: #FF4B4B; color: white; border-color: #FF4B4B;}}
         .main-header {{text-align: center; color: #FF4B4B; margin-bottom: 20px;}}
         
-        /* สไตล์ตารางราคาและคิว (แบบโปร่งใส ไม่ใช้พื้นหลังขาว) */
+        /* ❌ เอาพื้นหลังขาวออกจากประวัติและราคา */
         .glass-card {{
-            background-color: rgba(255, 255, 255, 0.05) !important; 
-            padding: 20px; border-radius: 15px;
-            border-left: 8px solid #FF4B4B; margin-bottom: 15px;
+            background-color: transparent !important; 
+            padding: 15px; border-radius: 10px;
+            border-left: 5px solid #FF4B4B; margin-bottom: 10px;
             color: #ffffff !important; 
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }}
-        .glass-card b {{ color: #FF4B4B !important; font-size: 1.2rem; display: block; margin-bottom: 5px; }}
-        .price-text {{ color: #FF4B4B !important; font-weight: bold; font-size: 1.1rem; }}
+        .glass-card b {{ color: #FF4B4B !important; font-size: 1.1rem; display: block; }}
 
-        /* Social Buttons */
-        .social-container {{ display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }}
-        .social-btn {{
-            padding: 10px 20px; border-radius: 30px; color: white !important;
-            text-decoration: none; font-weight: bold; font-size: 14px; text-align: center; min-width: 120px;
-        }}
-        .fb-color {{ background-color: #1877F2; }}
-        .line-color {{ background-color: #00B900; }}
-        .gps-color {{ background-color: #EA4335; }}
-
-        /* Chat System (Transparent Style) */
+        /* ❌ เอาพื้นหลังขาวออกจากกล่องแชท */
         .chat-container {{ 
             background-color: transparent !important; 
-            padding: 10px; border-radius: 15px; 
             margin-bottom: 20px; height: 400px; overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: none !important;
         }}
         .bubble {{ padding: 12px 18px; border-radius: 20px; margin-bottom: 10px; max-width: 80%; font-size: 16px; clear: both; display: block; }}
         .user-msg {{ background-color: #0084FF; color: white !important; float: right; border-bottom-right-radius: 2px; }}
         .admin-msg {{ background-color: #333333; color: white !important; float: left; border-bottom-left-radius: 2px; border: 1px solid #444; }}
+        
+        /* ปรับสีตัวหนังสือ Tab ให้เห็นชัด */
+        .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {{
+            color: white !important;
+        }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -101,32 +94,23 @@ if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.markdown(f"""
         <div style="text-align:center; margin-bottom:15px;">
-            <h3 style='margin:0; color:white;'>📞 ติดต่อเรา: {SHOP_TEL}</h3>
-            <p style='color:gray;'>เปิด 09:30 - 19:30 น. (หยุดทุกวันพุธ)</p>
+            <h3 style='margin:0; color:white;'>📞 {SHOP_TEL}</h3>
+            <p style='color:gray;'>09:30 - 19:30 น. (หยุดทุกพุธ)</p>
         </div>
         <div class="social-container">
-            <a href="{FACEBOOK_URL}" target="_blank" class="social-btn fb-color">🔵 Facebook</a>
-            <a href="{LINE_URL}" target="_blank" class="social-btn line-color">🟢 Line</a>
-            <a href="{SHOP_LOCATION_URL}" target="_blank" class="social-btn gps-color">🔴 GPS แผนที่</a>
+            <a href="{FACEBOOK_URL}" target="_blank" class="social-btn fb-color">Facebook</a>
+            <a href="{LINE_URL}" target="_blank" class="social-btn line-color">Line</a>
+            <a href="{SHOP_LOCATION_URL}" target="_blank" class="social-btn gps-color">GPS</a>
         </div>
     """, unsafe_allow_html=True)
     
-    st.subheader("📋 บริการและราคา")
     services = {"✂️ ตัดผมชาย": "150-350", "💇‍♀️ ตัดผมหญิง": "350-800", "🚿 สระ-ไดร์": "200-450", "🎨 ทำสีผม": "1,500+", "✨ ยืดวอลลุ่ม": "1,000+"}
     p_col1, p_col2 = st.columns(2)
     for i, (name, price) in enumerate(services.items()):
         target = p_col1 if i % 2 == 0 else p_col2
-        target.markdown(f'<div class="glass-card"><b>{name}</b><span class="price-text">{price} บาท</span></div>', unsafe_allow_html=True)
+        target.markdown(f'<div class="glass-card"><b>{name}</b> {price} บาท</div>', unsafe_allow_html=True)
 
-# --- 5. PAGE: VIEW QUEUES (แสดงเฉพาะคิวรอรับบริการ) ---
-elif st.session_state.page == "ViewQueues":
-    st.subheader("📅 คิวรอรับบริการวันนี้")
-    df_b = get_data("Bookings")
-    active_today = df_b[(df_b['date'] == datetime.now().strftime("%Y-%m-%d")) & (df_b['status'] == 'รอรับบริการ')]
-    if active_today.empty: st.info("ไม่มีคิวค้างในขณะนี้")
-    else: st.dataframe(active_today[['time', 'service']].sort_values('time'), use_container_width=True)
-
-# --- 6. PAGE: BOOKING & CHAT (สำหรับลูกค้า) ---
+# --- 5. PAGE: BOOKING & CHAT ---
 elif st.session_state.page == "Booking":
     st.subheader(f"👋 สวัสดีคุณ {st.session_state.get('fullname', st.session_state.username)}")
     t1, t2, t3 = st.tabs(["🆕 จองคิวใหม่", "📋 คิวของฉัน", "💬 แชทสอบถาม"])
@@ -135,25 +119,19 @@ elif st.session_state.page == "Booking":
         svc = st.selectbox("เลือกบริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืดผมวอลลุ่ม"])
         d = st.date_input("เลือกวันที่จอง", min_value=datetime.now().date())
         t = st.selectbox("เลือกเวลา", [f"{h:02d}:00" for h in range(10, 20)])
-        if d.weekday() == 2: st.error("❌ ร้านหยุดวันพุธ")
-        elif st.button("✅ ยืนยันการจอง"):
+        if st.button("✅ ยืนยันการจอง"):
             df_check = get_data("Bookings")
-            user_booked = df_check[(df_check['username'] == st.session_state.username) & (df_check['date'] == str(d)) & (df_check['status'] == 'รอรับบริการ')]
-            slots_taken = len(df_check[(df_check['date'] == str(d)) & (df_check['time'] == t) & (df_check['status'] == 'รอรับบริการ')])
-            if not user_booked.empty: st.error(f"⚠️ คุณมีคิวจองวันที่ {d} อยู่แล้ว")
-            elif slots_taken >= 2: st.error(f"❌ เวลา {t} เต็มแล้ว (จำกัด 2 ท่านต่อช่วงเวลา)")
-            else:
-                new_r = pd.DataFrame([{"id":str(int(datetime.now().timestamp())), "username":st.session_state.username, "service":svc, "date":str(d), "time":t, "status":"รอรับบริการ"}])
-                conn.update(worksheet="Bookings", data=pd.concat([df_check, new_r])); st.success("จองสำเร็จ!"); st.rerun()
+            new_r = pd.DataFrame([{"id":str(int(datetime.now().timestamp())), "username":st.session_state.username, "service":svc, "date":str(d), "time":t, "status":"รอรับบริการ"}])
+            conn.update(worksheet="Bookings", data=pd.concat([df_check, new_r])); st.success("จองสำเร็จ!"); st.rerun()
 
     with t2:
         df_b = get_data("Bookings")
-        # แสดงเฉพาะคิวที่ยังไม่เสร็จ (สถานะ รอรับบริการ)
         my_active = df_b[(df_b['username'] == st.session_state.username) & (df_b['status'] == 'รอรับบริการ')]
-        if my_active.empty: st.info("ไม่มีคิวค้างในขณะนี้")
+        if my_active.empty: st.info("ไม่มีคิวค้าง")
         else:
             for _, r in my_active.iterrows():
                 c_i, c_b = st.columns([4, 1])
+                # กล่องนี้จะไม่มีพื้นหลังสีขาวแล้ว
                 c_i.markdown(f'<div class="glass-card"><b>📅 {r["date"]} | ⏰ {r["time"]}</b>{r["service"]}</div>', unsafe_allow_html=True)
                 if c_b.button("❌ ยกเลิก", key=f"can_{r['id']}"):
                     conn.update(worksheet="Bookings", data=df_b[df_b['id'] != r['id']]); st.rerun()
@@ -172,11 +150,10 @@ elif st.session_state.page == "Booking":
                 new_m = pd.DataFrame([{"msg_id":str(int(datetime.now().timestamp())), "username":st.session_state.username, "sender":"user", "text":txt, "timestamp":datetime.now().strftime("%H:%M")}])
                 conn.update(worksheet="Messages", data=pd.concat([df_msg, new_m])); st.rerun()
 
-# --- 7. PAGE: ADMIN (จัดการคิวและตอบแชท) ---
+# --- 7. PAGE: ADMIN ---
 elif st.session_state.page == "Admin":
-    st.subheader("📊 ระบบจัดการหลังบ้าน")
-    adm_t1, adm_t2 = st.tabs(["📉 จัดการคิว", "💬 ตอบแชทลูกค้า"])
-    
+    st.subheader("📊 หลังบ้าน")
+    adm_t1, adm_t2 = st.tabs(["📉 จัดการคิว", "💬 ตอบแชท"])
     with adm_t1:
         df_b = get_data("Bookings")
         pending = df_b[df_b['status'] == 'รอรับบริการ']
@@ -187,13 +164,11 @@ elif st.session_state.page == "Admin":
                 if c2.button("✅ เสร็จสิ้น", key=f"adm_{r['id']}"):
                     df_b.loc[df_b['id'] == r['id'], 'status'] = 'เสร็จสิ้น'
                     conn.update(worksheet="Bookings", data=df_b); st.rerun()
-        else: st.info("ไม่มีคิวค้างในระบบ")
 
     with adm_t2:
         df_msg = get_data("Messages")
         if not df_msg.empty:
-            user_list = df_msg['username'].unique()
-            target = st.selectbox("เลือกคุยกับลูกค้า", user_list)
+            target = st.selectbox("เลือกคุยกับลูกค้า", df_msg['username'].unique())
             st.markdown('<div class="chat-container">', unsafe_allow_html=True)
             for _, m in df_msg[df_msg['username'] == target].sort_values('msg_id').iterrows():
                 cls = "user-msg" if m['sender'] == "user" else "admin-msg"
@@ -204,11 +179,10 @@ elif st.session_state.page == "Admin":
                 if st.form_submit_button("ส่ง"):
                     new_m = pd.DataFrame([{"msg_id":str(int(datetime.now().timestamp())), "username":target, "sender":"admin", "text":rep, "timestamp":datetime.now().strftime("%H:%M")}])
                     conn.update(worksheet="Messages", data=pd.concat([df_msg, new_m])); st.rerun()
-        else: st.info("ยังไม่มีข้อความจากลูกค้า")
 
-# --- AUTH (LOGIN / REGISTER) ---
+# --- LOGIN / REGISTER (ใช้ธีมปกติ) ---
 elif st.session_state.page == "Login":
-    u, p = st.text_input("ชื่อผู้ใช้"), st.text_input("รหัสผ่าน", type="password")
+    u, p = st.text_input("User"), st.text_input("Pass", type="password")
     if st.button("เข้าสู่ระบบ"):
         if u == "admin222" and p == "222":
             st.session_state.update({'logged_in':True, 'user_role':'admin', 'username':'Admin'}); navigate("Admin")
@@ -222,7 +196,7 @@ elif st.session_state.page == "Login":
 elif st.session_state.page == "Register":
     with st.form("reg"):
         nu, np, nf, nt = st.text_input("Username"), st.text_input("Password"), st.text_input("ชื่อจริง"), st.text_input("เบอร์โทร")
-        if st.form_submit_button("สมัครสมาชิก"):
+        if st.form_submit_button("สมัคร"):
             df_u = get_data("Users")
             new_u = pd.DataFrame([{"username":nu, "password":np, "fullname":nf, "phone":nt, "role":"user"}])
             conn.update(worksheet="Users", data=pd.concat([df_u, new_u])); navigate("Login")
