@@ -1,4 +1,3 @@
-st.write(st.secrets)
 import streamlit as st
 import pandas as pd
 import gspread
@@ -6,6 +5,9 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import hashlib
 import plotly.express as px
+
+st.write(st.secrets)
+
 
 # ---------------- CONFIG ----------------
 
@@ -354,5 +356,6 @@ else:
         st.session_state.clear()
 
         st.rerun()
+
 
 
