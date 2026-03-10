@@ -3,10 +3,10 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# --- 1. การตั้งค่าหน้าจอ ---
+# --- 1. การตั้งค่าหน้าจอและสไตล์ ---
 st.set_page_config(page_title="Barber & Salon Online", layout="wide", initial_sidebar_state="collapsed")
 
-# 📍 ลิงก์ GPS ร้านคุณ
+# 📍 เปลี่ยนลิงก์ GPS ร้านคุณที่นี่
 SHOP_LOCATION_URL = "https://maps.google.com" 
 
 st.markdown("""
@@ -19,10 +19,14 @@ st.markdown("""
             border-left: 8px solid #FF4B4B; margin-bottom: 10px;
             box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
         }
-        .metric-box {
-            background-color: #f0f2f6; padding: 20px; border-radius: 15px;
-            text-align: center; box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+        /* สไตล์ Dashboard หลังบ้าน */
+        .metric-container {
+            background-color: #ffffff; padding: 25px; border-radius: 20px;
+            border: 2px solid #FF4B4B; text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
+        .metric-title { font-size: 20px; color: #555; margin-bottom: 10px; font-weight: bold; }
+        .metric-value { font-size: 40px; color: #FF4B4B; font-weight: 900; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -48,7 +52,7 @@ def get_data(sheet_name):
         return df.fillna("").map(clean_val)
     except: return pd.DataFrame()
 
-# --- 3. ระบบนำทาง ---
+# --- 3. ระบบนำทาง (Navigation) ---
 if 'page' not in st.session_state: st.session_state.page = "Home"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
@@ -79,37 +83,36 @@ else:
 
 st.divider()
 
-# --- 4. หน้าแอดมิน (Admin) - เพิ่มสรุปยอดรายวัน ---
+# --- 4. หน้าแอดมิน (Admin) - Dashboard สรุปยอด ---
 if st.session_state.page == "Admin":
-    st.subheader("📊 ระบบจัดการร้านและสรุปยอดขาย")
+    st.subheader("📊 ระบบจัดการร้านและสรุปยอดรายวัน")
     df_b = get_data("Bookings")
     df_u = get_data("Users")
     
     if not df_b.empty:
-        # เตรียมข้อมูลสำหรับ Dashboard
         today_str = datetime.now().strftime("%Y-%m-%d")
         df_today = df_b[df_b['date'] == today_str]
         
-        # คำนวณยอด
-        daily_revenue = pd.to_numeric(df_today['price'], errors='coerce').sum()
-        daily_customers = len(df_today)
+        # คำนวณยอดและจำนวนลูกค้า
+        daily_rev = pd.to_numeric(df_today['price'], errors='coerce').sum()
+        daily_cust = len(df_today)
         
-        # แสดง Metric Dashboard
-        col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m1:
-            st.markdown(f"<div class='metric-box'><h3>💰 ยอดขายวันนี้</h3><h2>{daily_revenue:,.0f} บาท</h2></div>", unsafe_allow_html=True)
-        with col_m2:
-            st.markdown(f"<div class='metric-box'><h3>👥 จำนวนลูกค้าวันนี้</h3><h2>{daily_customers} ท่าน</h2></div>", unsafe_allow_html=True)
-        with col_m3:
-            st.markdown(f"<div class='metric-box'><h3>📅 วันที่</h3><h2>{today_str}</h2></div>", unsafe_allow_html=True)
+        # แสดงผล Dashboard แบบชัดเจน
+        c_m1, c_m2, c_m3 = st.columns(3)
+        with c_m1:
+            st.markdown(f"<div class='metric-container'><div class='metric-title'>💰 ยอดขายวันนี้</div><div class='metric-value'>{daily_rev:,.0f} ฿</div></div>", unsafe_allow_html=True)
+        with c_m2:
+            st.markdown(f"<div class='metric-container'><div class='metric-title'>👥 ลูกค้าวันนี้</div><div class='metric-value'>{daily_cust} ท่าน</div></div>", unsafe_allow_html=True)
+        with c_m3:
+            st.markdown(f"<div class='metric-container'><div class='metric-title'>📅 วันที่</div><div class='metric-value'>{today_str}</div></div>", unsafe_allow_html=True)
         
         st.divider()
-
-        # ตารางรายการจอง
+        
+        # ตารางแสดงข้อมูลลูกค้า (แอดมินเห็นชื่อจริงและเบอร์โทร)
         df_admin = pd.merge(df_b, df_u[['username', 'fullname', 'phone']], on='username', how='left')
         h = st.columns([1, 1.5, 1.2, 1.3, 1, 1, 1, 0.6])
-        labels = ["เวลา", "ลูกค้า", "เบอร์โทร", "บริการ", "วันที่", "สถานะ", "จัดการ", "ลบ"]
-        for i, lbl in enumerate(labels): h[i].write(f"**{lbl}**")
+        for i, lbl in enumerate(["เวลา", "ชื่อลูกค้า", "เบอร์โทร", "บริการ", "วันที่", "สถานะ", "ยืนยัน", "ลบ"]):
+            h[i].write(f"**{lbl}**")
         
         for _, row in df_admin.sort_values(['date','time'], ascending=[False, True]).iterrows():
             r = st.columns([1, 1.5, 1.2, 1.3, 1, 1, 1, 0.6])
@@ -121,55 +124,36 @@ if st.session_state.page == "Admin":
             r[5].write("🔵 รอ" if row['status'] == 'รอรับบริการ' else "✅ เสร็จ")
             
             if row['status'] == 'รอรับบริการ':
-                if r[6].button("เสร็จสิ้น", key=f"adm_d_{row['id']}"):
+                if r[6].button("เสร็จสิ้น", key=f"ok_{row['id']}"):
                     df_b.loc[df_b['id'] == row['id'], 'status'] = 'เสร็จสิ้น'
                     conn.update(worksheet="Bookings", data=df_b)
                     st.rerun()
             else: r[6].write("-")
             
-            if r[7].button("🗑️", key=f"adm_del_{row['id']}"):
+            if r[7].button("🗑️", key=f"del_{row['id']}"):
                 conn.update(worksheet="Bookings", data=df_b[df_b['id'] != row['id']])
                 st.rerun()
 
-# --- ส่วนอื่นๆ (Home, Register, Booking, Login, ViewQueues) คงเดิมตามเงื่อนไขก่อนหน้า ---
-elif st.session_state.page == "Home":
-    st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
-    col_i1, col_i2 = st.columns(2)
-    col_i1.info("⏰ 09:30 - 19:30 น. (หยุดทุกวันพุธ)")
-    col_i2.link_button("📍 นำทางไปยังร้าน (GPS)", SHOP_LOCATION_URL, type="primary")
-    p_col1, p_col2 = st.columns(2)
-    for i, (name, price) in enumerate(SERVICES_DISPLAY.items()):
-        target = p_col1 if i % 2 == 0 else p_col2
-        target.markdown(f'<div class="price-card"><b>{name}</b><br><span style="color:#FF4B4B;">{price} บาท</span></div>', unsafe_allow_html=True)
-
-elif st.session_state.page == "Register":
-    st.subheader("📝 สมัครสมาชิก")
-    with st.form("reg"):
-        nu, np = st.text_input("Username"), st.text_input("Password", type="password")
-        nf, nt = st.text_input("ชื่อ-นามสกุล"), st.text_input("เบอร์โทรศัพท์")
-        if st.form_submit_button("สมัครสมาชิก"):
-            if not all([nu, np, nf, nt]): st.error("❌ กรุณากรอกข้อมูลให้ครบ")
-            else:
-                df_u = get_data("Users")
-                if nu in df_u['username'].values: st.error("❌ มีชื่อผู้ใช้นี้แล้ว")
-                else:
-                    new_u = pd.DataFrame([{"username":nu, "password":np, "fullname":nf, "phone":nt, "role":"user"}])
-                    conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
-                    st.success("✅ สมัครสำเร็จ!")
-
+# --- 5. หน้าจองคิว (Booking) - เงื่อนไขพนักงาน 2 คน และ 1 ครั้ง/วัน ---
 elif st.session_state.page == "Booking":
     st.subheader(f"👋 สวัสดีคุณ {st.session_state.username}")
     t1, t2 = st.tabs(["🆕 จองคิวใหม่", "📋 ประวัติ"])
     with t1:
         svc = st.selectbox("เลือกบริการ", list(SERVICES_BASE_PRICE.keys()))
-        d, t = st.date_input("วันที่"), st.selectbox("เลือกเวลา", TIME_SLOTS)
+        d, t = st.date_input("วันที่จอง"), st.selectbox("เลือกเวลา", TIME_SLOTS)
+        
         if d.weekday() == 2: st.error("⚠️ ร้านหยุดวันพุธ")
         elif st.button("ยืนยันการจอง"):
             df_b = get_data("Bookings")
-            user_today = df_b[(df_b['username'] == st.session_state.username) & (df_b['date'] == str(d)) & (df_b['status'] == 'รอรับบริการ')]
+            # 🛡️ เงื่อนไข 1: 1 คน จองได้แค่ 1 ครั้งต่อวัน
+            user_booked = df_b[(df_b['username'] == st.session_state.username) & (df_b['date'] == str(d)) & (df_b['status'] == 'รอรับบริการ')]
+            # 🛡️ เงื่อนไข 2: ล็อก 2 คนต่อหนึ่งช่วงเวลา (พนักงาน 2 คน)
             booked_now = len(df_b[(df_b['date'] == str(d)) & (df_b['time'] == t) & (df_b['status'] == 'รอรับบริการ')])
-            if not user_today.empty: st.error(f"❌ คุณได้จองคิววันที่ {d} ไปแล้ว")
-            elif booked_now >= 2: st.error(f"❌ เวลานี้ ({t}) เต็ม (พนักงาน 2 ท่าน)")
+            
+            if not user_booked.empty:
+                st.error(f"❌ คุณได้จองคิววันที่ {d} ไปแล้ว (จำกัด 1 ท่านต่อวัน)")
+            elif booked_now >= 2:
+                st.error(f"❌ เวลานี้ ({t}) เต็มโควตาพนักงาน 2 ท่านแล้ว")
             else:
                 new_id = str(int(datetime.now().timestamp()))
                 new_r = pd.DataFrame([{"id":new_id, "username":st.session_state.username, "service":svc, "date":str(d), "time":t, "price":str(SERVICES_BASE_PRICE[svc]), "status":"รอรับบริการ"}])
@@ -179,12 +163,38 @@ elif st.session_state.page == "Booking":
     with t2:
         df_b = get_data("Bookings")
         my = df_b[df_b['username'] == st.session_state.username]
-        for _, row in my.iterrows():
-            st.write(f"🏷️ {row['service']} | ⏰ {row['time']} ({row['date']}) - {row['status']}")
+        for _, r in my.iterrows():
+            st.write(f"📅 {r['date']} | ⏰ {r['time']} | {r['service']} | {r['status']}")
+
+# --- ส่วนอื่นๆ (Home, Register, Login, ViewQueues) ---
+elif st.session_state.page == "Home":
+    st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
+    c_i1, c_i2 = st.columns(2)
+    c_i1.info("⏰ 09:30 - 19:30 น. (หยุดวันพุธ)")
+    c_i2.link_button("📍 นำทางไปยังร้าน (GPS)", SHOP_LOCATION_URL, type="primary")
+    p_col1, p_col2 = st.columns(2)
+    for i, (name, price) in enumerate(SERVICES_DISPLAY.items()):
+        target = p_col1 if i % 2 == 0 else p_col2
+        target.markdown(f'<div class="price-card"><b>{name}</b><br><span style="color:#FF4B4B;">{price} บาท</span></div>', unsafe_allow_html=True)
+
+elif st.session_state.page == "Register":
+    st.subheader("📝 สมัครสมาชิก")
+    with st.form("reg"):
+        nu, np = st.text_input("Username"), st.text_input("Password", type="password")
+        nf, nt = st.text_input("ชื่อ-นามสกุล"), st.text_input("เบอร์โทรศัพท์ (จำเป็น)")
+        if st.form_submit_button("สมัครสมาชิก"):
+            if not all([nu, np, nf, nt]): st.error("❌ กรุณากรอกข้อมูลให้ครบ")
+            else:
+                df_u = get_data("Users")
+                if nu in df_u['username'].values: st.error("❌ Username นี้มีคนใช้แล้ว")
+                else:
+                    new_u = pd.DataFrame([{"username":nu, "password":np, "fullname":nf, "phone":nt, "role":"user"}])
+                    conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
+                    st.success("✅ สมัครสำเร็จ!")
 
 elif st.session_state.page == "Login":
     u, p = st.text_input("Username"), st.text_input("Password", type="password")
-    if st.button("ตกลง"):
+    if st.button("เข้าสู่ระบบ"):
         if u == "admin222" and p == "222":
             st.session_state.update({'logged_in':True, 'user_role':'admin', 'username':'Admin'}); navigate("Admin")
         else:
@@ -195,7 +205,7 @@ elif st.session_state.page == "Login":
             else: st.error("❌ ข้อมูลไม่ถูกต้อง")
 
 elif st.session_state.page == "ViewQueues":
-    st.subheader("📅 คิววันนี้")
+    st.subheader("📅 รายการคิววันนี้ (จำกัด 2 ท่านต่อช่วงเวลา)")
     df_b = get_data("Bookings")
     active = df_b[(df_b['date'] == str(datetime.now().date())) & (df_b['status'] == 'รอรับบริการ')]
     st.dataframe(active[['time', 'service']].sort_values('time'), use_container_width=True)
