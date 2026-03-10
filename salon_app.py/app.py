@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 
 # --- 1. การตั้งค่าหน้าจอและสไตล์ ---
-st.set_page_config(page_title="Barber & Salon Online", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="222-Salon", layout="wide", initial_sidebar_state="collapsed")
 
 # 📍 เปลี่ยนลิงก์ GPS ร้านคุณที่นี่
 SHOP_LOCATION_URL = "https://www.google.com/maps/place/222+%E0%B8%96%E0%B8%99%E0%B8%99+%E0%B9%80%E0%B8%97%E0%B8%A8%E0%B8%9A%E0%B8%B2%E0%B8%A5+1+%E0%B8%95%E0%B8%B3%E0%B8%9A%E0%B8%A5%E0%B8%9A%E0%B9%88%E0%B8%AD%E0%B8%A2%E0%B8%B2%E0%B8%87+%E0%B8%AD%E0%B8%B3%E0%B9%80%E0%B8%A0%E0%B8%AD%E0%B9%80%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%87%E0%B8%AA%E0%B8%87%E0%B8%82%E0%B8%A5%E0%B8%B2+%E0%B8%AA%E0%B8%87%E0%B8%82%E0%B8%A5%E0%B8%B2+90000/@7.1915128,100.6007972,17z/data=!3m1!4b1!4m6!3m5!1s0x304d3323c7ad029d:0x7cfb098f4f859e4c!8m2!3d7.1915128!4d100.6007972!16s%2Fg%2F11jylj3r6y?entry=ttu&g_ep=EgoyMDI2MDMwOC4wIKXMDSoASAFQAw%3D%3D" 
@@ -36,7 +36,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 SERVICES_DISPLAY = {
     "✂️ ตัดผมชาย": "150 - 350", "💇‍♀️ ตัดผมหญิง": "350 - 800",
     "🚿 สระ-ไดร์": "200 - 450", "🎨 ทำสีผม": "1,500 - 4,500",
-    "✨ ยืดผมวอลลุ่ม": "2,000 - 5,500", "🌿 เคราติน": "1,500 - 3,500"
+    "✨ ยืดผมดัดผมวอลลุ่ม": "1,000 - 5,500", "🌿 เคราติน": "1,500 - 3,500"
 }
 SERVICES_BASE_PRICE = {"ตัดผมชาย": 150, "ตัดผมหญิง": 350, "สระ-ไดร์": 200, "ทำสีผม": 1500, "ยืดผมวอลลุ่ม": 2000, "เคราติน": 1500}
 TIME_SLOTS = [f"{h:02d}:{m}" for h in range(9, 20) for m in ["00", "30"] if "09:30" <= f"{h:02d}:{m}" <= "19:30"]
@@ -60,12 +60,12 @@ def navigate(p):
     st.session_state.page = p
     st.rerun()
 
-st.markdown("<h1 class='main-header'>✂️ Barber & Salon Online</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-header'>✂️222-Salon Online</h1>", unsafe_allow_html=True)
 m1, m2, m3, m4, m5 = st.columns(5)
 with m1: 
     if st.button("🏠 หน้าแรก"): navigate("Home")
 with m2: 
-    if st.button("📅 คิวว่างวันนี้"): navigate("ViewQueues")
+    if st.button("📅 คิววันนี้"): navigate("ViewQueues")
 
 if not st.session_state.logged_in:
     with m4: 
@@ -209,4 +209,5 @@ elif st.session_state.page == "ViewQueues":
     df_b = get_data("Bookings")
     active = df_b[(df_b['date'] == str(datetime.now().date())) & (df_b['status'] == 'รอรับบริการ')]
     st.dataframe(active[['time', 'service']].sort_values('time'), use_container_width=True)
+
 
