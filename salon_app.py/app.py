@@ -32,7 +32,7 @@ st.markdown("""
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 2. ข้อมูลบริการและฟังก์ชันช่วย ---
+# --- 2. ฟังก์ชันดึงข้อมูลและตั้งค่าบริการ ---
 SERVICES_DISPLAY = {
     "✂️ ตัดผมชาย": "150 - 350", "💇‍♀️ ตัดผมหญิง": "350 - 800",
     "🚿 สระ-ไดร์": "200 - 450", "🎨 ทำสีผม": "1,500 - 4,500",
@@ -121,8 +121,8 @@ if st.session_state.page == "Admin":
         if not df_msg.empty:
             all_users = df_msg['username'].unique()
             target_user = st.selectbox("เลือกแชทกับลูกค้า:", all_users)
-            
             chat_box = df_msg[df_msg['username'] == target_user].sort_values('msg_id')
+            
             for _, m in chat_box.iterrows():
                 align = "left" if m['sender'] == "user" else "right"
                 cls = "user-bubble" if m['sender'] == "user" else "admin-bubble"
@@ -166,16 +166,16 @@ elif st.session_state.page == "Booking":
             st.markdown(f"<div style='text-align: {align};'><div class='chat-bubble {cls}'>{m['text']}</div></div>", unsafe_allow_html=True)
             
             if m['sender'] == "user":
-                c_edit, c_del = st.columns([1, 1])
-                with c_del:
-                    if st.button("🗑️", key=f"msg_del_{m['msg_id']}"):
-                        conn.update(worksheet="Messages", data=df_msg[df_msg['msg_id'] != m['msg_id']]); st.rerun()
-                with c_edit:
-                    with st.popover("📝 แก้ไข"):
-                        new_txt = st.text_input("แก้ไขข้อความ", value=m['text'], key=f"edt_{m['msg_id']}")
+                with st.popover("📝 จัดการข้อความ"):
+                    new_txt = st.text_input("แก้ไขข้อความ", value=m['text'], key=f"edt_{m['msg_id']}")
+                    c_sav, c_del = st.columns(2)
+                    with c_sav:
                         if st.button("💾 บันทึก", key=f"sav_{m['msg_id']}"):
                             df_msg.loc[df_msg['msg_id'] == m['msg_id'], 'text'] = new_txt
                             conn.update(worksheet="Messages", data=df_msg); st.rerun()
+                    with c_del:
+                        if st.button("🗑️ ลบข้อความ", key=f"msg_del_{m['msg_id']}", type="primary"):
+                            conn.update(worksheet="Messages", data=df_msg[df_msg['msg_id'] != m['msg_id']]); st.rerun()
 
         with st.form("user_msg_form", clear_on_submit=True):
             u_msg = st.text_input("พิมพ์ข้อความ...")
@@ -183,7 +183,7 @@ elif st.session_state.page == "Booking":
                 new_row = pd.DataFrame([{"msg_id": str(int(datetime.now().timestamp())), "username": st.session_state.username, "sender": "user", "text": u_msg, "timestamp": datetime.now().strftime("%H:%M")}])
                 conn.update(worksheet="Messages", data=pd.concat([df_msg, new_row], ignore_index=True)); st.rerun()
 
-# --- 6. หน้าอื่นๆ (Home, Register, Login, ViewQueues) ---
+# --- 6. หน้าอื่นๆ ---
 elif st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     c_i1, c_i2 = st.columns(2)
