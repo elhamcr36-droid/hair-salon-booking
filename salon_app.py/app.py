@@ -14,7 +14,7 @@ st.set_page_config(
     layout="centered"
 )
 
-st.title("✂️ Smart Salon Booking System")
+st.title("✂️ 222-Salon")
 
 # ---------------- CONFIG ----------------
 
@@ -339,7 +339,7 @@ def booking_calendar():
 
 def shop_contact():
 
-    st.subheader("📍 ติดต่อร้าน Smart Salon")
+    st.subheader("📍 ติดต่อร้าน 222-Salon")
 
     lat = 7.1897
     lon = 100.5951
@@ -518,3 +518,4 @@ else:
 
     else:
         register()
+
