@@ -4,10 +4,11 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import hashlib
+import plotly.express as px
 
 # ---------------- CONFIG ----------------
 
-SPREADSHEET_ID = "1seP8Gg3uvUAPEK1Ejd9tAtYCmaduPt6Us7UEgHhMw4k"
+SPREADSHEET_ID = "YOUR_SPREADSHEET_ID"
 
 scope = [
 "https://spreadsheets.google.com/feeds",
@@ -24,10 +25,23 @@ client = gspread.authorize(credentials)
 sheet_users = client.open_by_key(SPREADSHEET_ID).worksheet("users")
 sheet_bookings = client.open_by_key(SPREADSHEET_ID).worksheet("bookings")
 
-# ---------------- UTILS ----------------
+# ---------------- SERVICES ----------------
+
+services = {
+"Haircut":150,
+"Hair Wash":80,
+"Hair Color":500,
+"Hair Straightening":1000,
+"Hair Spa":600,
+"Beard Trim":120
+}
+
+# ---------------- PASSWORD HASH ----------------
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
+# ---------------- LOAD DATA ----------------
 
 def load_users():
     data = sheet_users.get_all_records()
@@ -37,253 +51,159 @@ def load_bookings():
     data = sheet_bookings.get_all_records()
     return pd.DataFrame(data)
 
-def next_queue():
+# ---------------- REGISTER ----------------
 
-    df = load_bookings()
+def register(username,password):
+    users = load_users()
+    if username in users["username"].values:
+        st.error("User already exists")
+        return
 
-    if len(df) == 0:
-        return "Q001"
+    sheet_users.append_row([
+        username,
+        hash_password(password),
+        "user"
+    ])
 
-    last = df.iloc[-1]["queue"]
-    num = int(last.replace("Q","")) + 1
-
-    return f"Q{num:03d}"
+    st.success("Register success")
 
 # ---------------- LOGIN ----------------
 
-def login():
+def login(username,password):
+    users = load_users()
 
-    st.title("✂️ Smart Salon Booking")
-
-    menu = ["Login","Register"]
-    choice = st.selectbox("Menu",menu)
-
-    if choice == "Login":
-
-        username = st.text_input("Username")
-        password = st.text_input("Password",type="password")
-
-        if st.button("Login"):
-
-            df = load_users()
-
-            user = df[
-            (df["username"]==username) &
-            (df["password"]==hash_password(password))
-            ]
-
-            if len(user)>0:
-
-                st.session_state.user = username
-                st.session_state.role = user.iloc[0]["role"]
-
-                st.success("Login success")
-                st.rerun()
-
-            else:
-                st.error("Login failed")
-
-    if choice == "Register":
-
-        username = st.text_input("Username")
-        password = st.text_input("Password",type="password")
-        phone = st.text_input("Phone")
-
-        if st.button("Register"):
-
-            sheet_users.append_row([
-            username,
-            hash_password(password),
-            phone,
-            "customer"
-            ])
-
-            st.success("Register success")
-
-# ---------------- BOOKING ----------------
-
-def booking_page():
-
-    st.subheader("✂️ จองคิวร้านทำผม")
-
-    services = [
-    "ตัดผม",
-    "สระผม",
-    "ย้อมผม",
-    "ดัดผม",
-    "ยืดผม",
-    "ทำสีผม",
-    "ทรีทเมนต์"
+    user = users[
+        (users["username"]==username) &
+        (users["password"]==hash_password(password))
     ]
 
-    service = st.selectbox("บริการ",services)
+    if len(user)>0:
+        st.session_state.user=username
+        st.session_state.role=user.iloc[0]["role"]
+        st.success("Login success")
+    else:
+        st.error("Login failed")
 
-    date = st.date_input("วันที่")
+# ---------------- QUEUE ----------------
 
-    time = st.selectbox(
-    "เวลา",
-    [
-    "10:00",
-    "11:00",
-    "12:00",
-    "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-    "17:00"
-    ])
+def generate_queue():
 
-    if st.button("จองคิว"):
+    bookings = load_bookings()
 
-        queue = next_queue()
+    if len(bookings)==0:
+        return "Q001"
 
-        sheet_bookings.append_row([
+    last = bookings.iloc[-1]["queue"]
+
+    number = int(last[1:])+1
+
+    return "Q"+str(number).zfill(3)
+
+# ---------------- BOOK ----------------
+
+def book(service,date,time):
+
+    queue = generate_queue()
+    price = services[service]
+
+    sheet_bookings.append_row([
         queue,
         st.session_state.user,
         service,
         str(date),
-        time
-        ])
+        time,
+        price
+    ])
 
-        st.success(f"จองสำเร็จ เลขคิว {queue}")
+    st.success(f"Booked! Your queue is {queue}")
 
-# ---------------- MY QUEUE ----------------
+# ---------------- LOGIN PAGE ----------------
 
-def my_queue():
+def login_page():
 
-    st.subheader("📅 คิวของฉัน")
+    st.title("💈 Hair Salon Booking")
 
-    df = load_bookings()
+    menu = st.radio("Menu",["Login","Register"])
 
-    df = df[df["user"]==st.session_state.user]
+    username = st.text_input("Username")
+    password = st.text_input("Password",type="password")
 
-    st.dataframe(df,use_container_width=True)
+    if menu=="Login":
+        if st.button("Login"):
+            login(username,password)
 
-# ---------------- CALENDAR ----------------
+    if menu=="Register":
+        if st.button("Register"):
+            register(username,password)
 
-def booking_calendar():
+# ---------------- USER PAGE ----------------
 
-    st.subheader("📅 ปฏิทินคิวร้าน")
+def user_page():
 
-    df = load_bookings()
+    st.title("📅 Book Appointment")
 
-    if len(df)==0:
-        st.info("ยังไม่มีคิว")
-        return
+    service = st.selectbox("Service",list(services.keys()))
 
-    df["datetime"]=pd.to_datetime(df["date"]+" "+df["time"])
+    date = st.date_input("Date")
 
-    df = df.sort_values("datetime")
+    time = st.selectbox("Time",[
+    "10:00","11:00","12:00","13:00",
+    "14:00","15:00","16:00","17:00"
+    ])
 
-    st.dataframe(df,use_container_width=True)
+    if st.button("Book Now"):
+        book(service,date,time)
 
-# ---------------- ADMIN ----------------
+    st.divider()
 
-def admin_panel():
+    st.subheader("📍 Shop Location")
 
-    st.title("✂️ Admin Panel")
+    st.markdown(
+    "[Open Google Maps](https://maps.google.com)"
+    )
 
-    df = load_bookings()
+    st.subheader("📞 Call Shop")
 
-    for i,row in df.iterrows():
+    st.markdown("[Call 0812345678](tel:0812345678)")
 
-        col1,col2,col3,col4,col5 = st.columns(5)
+# ---------------- ADMIN PAGE ----------------
 
-        col1.write(row["queue"])
-        col2.write(row["user"])
-        col3.write(row["service"])
-        col4.write(row["date"]+" "+row["time"])
+def admin_page():
 
-        if col5.button("ลบ",key="del"+str(row["queue"])):
+    st.title("🛠 Admin Dashboard")
 
-            sheet_bookings.delete_rows(i+2)
-            st.rerun()
+    bookings = load_bookings()
 
-# ---------------- SHOP CONTACT ----------------
+    st.subheader("All Bookings")
+    st.dataframe(bookings)
 
-def shop_contact():
+    if len(bookings)>0:
 
-    st.subheader("📍 ติดต่อร้าน")
+        total = bookings["price"].sum()
 
-    lat = 7.1897
-    lon = 100.5951
-    phone = "0999999999"
+        st.metric("Total Revenue",total)
 
-    st.write("🏪 Smart Salon")
-
-    location = pd.DataFrame({
-    "lat":[lat],
-    "lon":[lon]
-    })
-
-    st.map(location)
-
-    col1,col2,col3 = st.columns(3)
-
-    with col1:
-
-        st.link_button(
-        "📞 โทรหาร้าน",
-        f"tel:{phone}"
+        fig = px.bar(
+        bookings,
+        x="service",
+        y="price",
+        title="Revenue by Service"
         )
 
-    with col2:
-
-        st.link_button(
-        "🧭 นำทางมาร้าน",
-        f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
-        )
-
-    with col3:
-
-        st.link_button(
-        "🗺 เปิด Google Maps",
-        f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
-        )
+        st.plotly_chart(fig)
 
 # ---------------- MAIN ----------------
 
-def main():
+if "user" not in st.session_state:
+    login_page()
 
-    if "user" not in st.session_state:
-        login()
-        return
-
-    menu = [
-    "จองคิว",
-    "คิวของฉัน",
-    "ปฏิทินคิว",
-    "ติดต่อร้าน",
-    "Logout"
-    ]
+else:
 
     if st.session_state.role=="admin":
-        menu.insert(3,"Admin")
+        admin_page()
+    else:
+        user_page()
 
-    choice = st.sidebar.selectbox("Menu",menu)
-
-    if choice=="จองคิว":
-        booking_page()
-
-    elif choice=="คิวของฉัน":
-        my_queue()
-
-    elif choice=="ปฏิทินคิว":
-        booking_calendar()
-
-    elif choice=="Admin":
-        admin_panel()
-
-    elif choice=="ติดต่อร้าน":
-        shop_contact()
-
-    elif choice=="Logout":
-
-        del st.session_state["user"]
+    if st.button("Logout"):
+        st.session_state.clear()
         st.rerun()
-
-# ---------------- RUN ----------------
-
-main()
-
-
