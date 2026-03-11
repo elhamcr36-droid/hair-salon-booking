@@ -81,27 +81,37 @@ if st.session_state.page == "Home":
         target = p1 if i % 2 == 0 else p2
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
 
-    st.divider()
+   st.divider()
     c1, c2 = st.columns([1, 1])
+    
     with c1:
         st.subheader("📞 ติดต่อเรา")
         st.write("📱 **เบอร์โทร:** 081-222-2222")
         st.write("💬 **LINE ID:** @222salon")
         st.write("🔵 **Facebook:** 222 Salon")
     
-   with c2:
+    with c2:
         st.subheader("📍 พิกัดร้าน")
-        # ลิงก์สำหรับแสดงแผนที่ในหน้าเว็บ
-        map_embed_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.055624177263!2d100.596041!3d7.1915128!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x304d334d77f40429%3A0x7d80000000000000!2s222%20Tesaban%201%20Alley%2C%20Bo%20Yang%2C%20Mueang%20Songkhla%20District%2C%20Songkhla%2090000!5e0!3m2!1sth!2sth!4v1710170000000!5m2!1sth!2sth"
+        # พิกัดตรง 222 ถนนเทศบาล 1 ต.บ่อยาง จ.สงขลา
+        map_embed = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3958.981881519702!2d100.5927953!3d7.1915128!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x304d3369b7690429%3A0x6d1c806072932385!2zMjIyIFRlc2FiYW4gMSBBbGxleSwgVGFtYm9uIEJvIFlhbmcsIEFtcGhvZSBNdWFuZyBTb25na2hsYSwgQ2hhbmcgV2F0IFNvbmdraGxhIDkwMDAw!5e0!3m2!1sth!2sth!4v1710173000000!5m2!1sth!2sth"
         
-        # ลิงก์สำหรับให้ลูกค้ากดเปิดในแอป Maps เพื่อนำทาง
-        maps_link = "https://www.google.com/maps/search/?api=1&query=7.1915128,100.596041"
-        
-        # แสดงแผนที่ Embed
+        # ลิงก์สำหรับกดแล้วเปิดแอป Maps ทันที
+        direct_link = "https://maps.app.goo.gl/9E7vTqYVb5N5eY7Z7"
+
+        # แสดงแผนที่
         components.html(
-            f'<iframe src="{map_embed_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', 
+            f'<iframe src="{map_embed}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', 
             height=240
         )
+        
+        # ปุ่มกดเปิดในแอป
+        st.markdown(f'''
+            <a href="{direct_link}" target="_blank" style="text-decoration: none;">
+                <div style="background-color: #FF4B4B; color: white; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; margin-top: -10px;">
+                    🚩 กดเปิดใน Google Maps (นำทาง)
+                </div>
+            </a>
+        ''', unsafe_allow_html=True)
         
         # ปุ่มกดเพื่อเปิดนำทาง
         st.markdown(f'''
@@ -260,6 +270,7 @@ elif st.session_state.page == "ViewQueues":
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
         else: st.info(f"ไม่มีการจองในวันนี้ ({today_str})")
+
 
 
 
