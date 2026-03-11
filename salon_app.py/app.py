@@ -90,16 +90,16 @@ if st.session_state.page == "Home":
     st.divider()
     st.subheader("📞 ติดต่อเรา")
     c1, c2, c3 = st.columns(3)
-    with c1: st.markdown("<div class='contact-box'><h3>📞 โทร</h3><p>081-222-XXXX</p></div>", unsafe_allow_html=True)
+    with c1: st.markdown("<div class='contact-box'><h3>📞 โทร</h3><p>081-222-2222</p></div>", unsafe_allow_html=True)
     with c2: st.markdown("<div class='contact-box'><h3>💬 Line</h3><p>@222salon</p></div>", unsafe_allow_html=True)
-    with c3: st.markdown("<div class='contact-box'><h3>📍 ที่ตั้ง</h3><p>สุขุมวิท กทม.</p></div>", unsafe_allow_html=True)
+    with c3: st.markdown("<div class='contact-box'><h3>📍 ที่ตั้ง</h3><p>222 ซอย.พิรม สงขลา.</p></div>", unsafe_allow_html=True)
     st.write("")
     st.link_button("📍 นำทางด้วย Google Maps (GPS)", "https://www.google.com/maps/place/222+%E0%B8%96%E0%B8%99%E0%B8%99+%E0%B9%80%E0%B8%97%E0%B8%A8%E0%B8%9A%E0%B8%B2%E0%B8%A5+1+%E0%B8%95%E0%B8%B3%E0%B8%9A%E0%B8%A5%E0%B8%9A%E0%B9%88%E0%B8%AD%E0%B8%A2%E0%B8%B2%E0%B8%87+%E0%B8%AD%E0%B8%B3%E0%B9%80%E0%B8%A0%E0%B8%AD%E0%B9%80%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%87%E0%B8%AA%E0%B8%87%E0%B8%82%E0%B8%A5%E0%B8%B2+%E0%B8%AA%E0%B8%87%E0%B8%82%E0%B8%A5%E0%B8%B2+90000/@7.1915128,100.5982223,17z/data=!3m1!4b1!4m6!3m5!1s0x304d3323c7ad029d:0x7cfb098f4f859e4c!8m2!3d7.1915128!4d100.6007972!16s%2Fg%2F11jylj3r6y?entry=ttu&g_ep=EgoyMDI2MDMwOC4wIKXMDSoASAFQAw%3D%3D", type="primary", use_container_width=True)
 
 # --- หน้า Login ---
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
-    u_in = st.text_input("เบอร์โทรศัพท์ (Admin: admin222)").strip()
+    u_in = st.text_input("เบอร์โทรศัพท์").strip()
     p_in = st.text_input("รหัสผ่าน", type="password").strip()
     if st.button("ตกลง", type="primary"):
         if u_in == "admin222" and p_in == "222":
@@ -205,4 +205,5 @@ elif st.session_state.page == "Register":
             df_u = get_data("Users")
             conn.update(worksheet="Users", data=pd.concat([df_u, pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])], ignore_index=True))
             st.success("สมัครสำเร็จ!"); navigate("Login")
+
 
