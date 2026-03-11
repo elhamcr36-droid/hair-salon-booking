@@ -3,7 +3,6 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 import uuid
-import streamlit.components.v1 as components
 
 # --- 1. CONFIG & STYLING ---
 st.set_page_config(page_title="222-Salon-Booking", layout="wide", initial_sidebar_state="collapsed")
@@ -22,10 +21,10 @@ st.markdown("""
         .nav-button {
             display: block; background-color: #FF4B4B; color: white !important; 
             padding: 15px; border-radius: 12px; text-align: center; 
-            font-weight: bold; font-size: 16px; text-decoration: none;
+            font-weight: bold; font-size: 18px; text-decoration: none;
             box-shadow: 2px 4px 10px rgba(0,0,0,0.2); transition: 0.3s;
         }
-        .nav-button:hover { background-color: #d43f3f; transform: scale(1.02); }
+        .nav-button:hover { background-color: #d43f3f; transform: scale(1.02); color: white !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -38,8 +37,6 @@ def get_data(sheet_name):
         if df is None or df.empty: return pd.DataFrame()
         df = df.dropna(how='all')
         df.columns = [str(c).strip().lower() for c in df.columns]
-        for col in df.columns:
-            df[col] = df[col].astype(str).str.strip().replace(r'\.0$', '', regex=True).replace('nan', '')
         return df
     except: return pd.DataFrame()
 
@@ -78,7 +75,7 @@ st.divider()
 
 # --- 4. PAGE LOGIC ---
 
-# --- PAGE: HOME ---
+# --- หน้าแรก (Home) ---
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (⚠️ หยุดทุกวันเสาร์)")
@@ -101,22 +98,19 @@ if st.session_state.page == "Home":
     
     with c2:
         st.subheader("📍 พิกัดร้าน")
-        # ลิงก์ตรงปักหมุดพิกัด 7.1915128, 100.5983227 (222 ถนนเทศบาล 1)
-        # ใช้พิกัดจริงเพื่อให้ปักหมุดตรงเป๊ะตามรูปที่ลูกค้าต้องการ
-        maps_link = "https://www.google.com/maps/place/7.1915128,100.5983227"
-        
-        st.image("https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=400")
+        # ลิงก์ตรงปักหมุดพิกัด 7.191528, 100.598333 (ตรงตามรูปภาพ Google Maps)
+        maps_link = "https://www.google.com/maps/place/7%C2%B011'29.5%22N+100%C2%B035'54.0%22E/@7.191528,100.598333,17z"
         
         st.markdown(f'''
             <a href="{maps_link}" target="_blank" class="nav-button">
-                🚩 กดเพื่อเปิด Google Maps (นำทาง)
+                🚩 กดเปิด Google Maps <br> (นำทางไปที่ร้าน 222)
             </a>
             <p style="text-align: center; font-size: 13px; color: gray; margin-top: 10px;">
-                222 ถนนเทศบาล 1 ต.บ่อยาง อ.เมืองสงขลา จ.สงขลา
+                เลขที่ 222 ถนนเทศบาล 1 ต.บ่อยาง อ.เมืองสงขลา
             </p>
         ''', unsafe_allow_html=True)
 
-# --- PAGE: REGISTER ---
+# --- หน้าสมัครสมาชิก (Register) ---
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
     with st.form("reg_form"):
@@ -131,10 +125,10 @@ elif st.session_state.page == "Register":
                 else:
                     new_u = pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])
                     conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
-                    st.success("✅ สำเร็จ!"); navigate("Login")
-            else: st.error("❌ ข้อมูลไม่ถูกต้อง")
+                    st.success("✅ ลงทะเบียนสำเร็จ!"); navigate("Login")
+            else: st.error("❌ ข้อมูลไม่ครบหรือรหัสผ่านไม่ตรงกัน")
 
-# --- PAGE: LOGIN ---
+# --- หน้าเข้าสู่ระบบ (Login) ---
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
     u_in = st.text_input("เบอร์โทรศัพท์").strip()
@@ -149,19 +143,21 @@ elif st.session_state.page == "Login":
             if not user.empty:
                 st.session_state.update({'logged_in': True, 'user_role': 'user', 'username': u_in, 'fullname': user.iloc[0]['fullname']})
                 navigate("Booking")
-            else: st.error("❌ ข้อมูลไม่ถูกต้อง")
+            else: st.error("❌ เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง")
 
-# --- PAGE: BOOKING ---
+# --- หน้าจองคิว (Booking) ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
-    t1, t2 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิวของคุณ"])
+    st.subheader(f"✂️ จองคิว: คุณ {st.session_state.fullname}")
+    t1, t2 = st.tabs(["🆕 จองคิวใหม่", "📋 ประวัติการจอง"])
+    
     with t1:
         with st.form("b_form"):
             b_d = st.date_input("เลือกวันที่", min_value=datetime.now().date())
             b_t = st.selectbox("เวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
             b_s = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
-            if st.form_submit_button("ยืนยัน"):
+            if st.form_submit_button("ยืนยันการจอง"):
                 if b_d.weekday() == 5: 
-                    st.error("❌ ร้านหยุดวันเสาร์")
+                    st.error("❌ ร้านหยุดวันเสาร์ กรุณาเลือกวันอื่น")
                 else:
                     df_all = get_data("Bookings")
                     new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
@@ -171,22 +167,22 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
         df_history = get_data("Bookings")
         if not df_history.empty:
             my_qs = df_history[df_history['username'] == st.session_state.username]
-            st.dataframe(my_qs)
+            st.dataframe(my_qs, use_container_width=True)
 
-# --- PAGE: ADMIN ---
+# --- หน้าผู้ดูแลระบบ (Admin) ---
 elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
-    st.subheader("📊 จัดการร้าน (Admin)")
+    st.subheader("📊 รายการจองทั้งหมด (Admin)")
     df_admin = get_data("Bookings")
     if not df_admin.empty:
-        st.dataframe(df_admin)
+        st.dataframe(df_admin, use_container_width=True)
 
-# --- PAGE: VIEW QUEUES (TODAY) ---
+# --- หน้าดูคิววันนี้ (Public) ---
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิววันนี้")
     df_today = get_data("Bookings")
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    t_str = datetime.now().strftime("%Y-%m-%d")
     if not df_today.empty:
-        active = df_today[(df_today['date'] == today_str) & (df_today['status'] == "รอรับบริการ")]
+        active = df_today[(df_today['date'] == t_str) & (df_today['status'] != "ยกเลิก")]
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
-        else: st.info("วันนี้ยังไม่มีการจองคิว")
+        else: st.info("วันนี้ยังไม่มีคิว")
