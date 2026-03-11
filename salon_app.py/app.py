@@ -5,7 +5,7 @@ from datetime import datetime
 import uuid
 
 # --- 1. CONFIG & STYLING ---
-st.set_page_config(page_title="222-Salon-Full-System", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="222-Salon-Final-System", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -23,7 +23,6 @@ st.markdown("""
             font-weight: bold; font-size: 18px; text-decoration: none;
             box-shadow: 0px 4px 15px rgba(255, 75, 75, 0.3); transition: 0.3s;
         }
-        .nav-button:hover { background-color: #d43f3f; transform: translateY(-2px); color: white !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -49,7 +48,7 @@ def navigate(p):
 
 st.markdown("<h1 class='main-header'>✂️ 222-Salon</h1>", unsafe_allow_html=True)
 
-# แถบเมนูหลัก
+# เมนูหลัก
 m_cols = st.columns(5)
 with m_cols[0]:
     if st.button("🏠 หน้าแรก"): navigate("Home")
@@ -74,7 +73,7 @@ st.divider()
 
 # --- 4. PAGE LOGIC ---
 
-# --- หน้าแรก (Home) ---
+# --- หน้าแรก ---
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (⚠️ หยุดทุกวันเสาร์)")
@@ -95,16 +94,16 @@ if st.session_state.page == "Home":
     with c2:
         st.subheader("📍 พิกัดร้าน")
         # ลิงก์พิกัดจากรูปภาพ Google Maps (222 ถ.เทศบาล 1)
-        maps_link = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.055624177263!2d100.596041!3d7.1915128!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x304d334d77f40429%3A0x7d80000000000000!2s222%20Tesaban%201%20Alley%2C%20Bo%20Yang%2C%20Mueang%20Songkhla%20District%2C%20Songkhla%2090000!5e0!3m2!1sth!2sth!4v1710170000000!5m2!1sth!2sth2"
-        st.markdown(f'''<a href="{maps_link}" target="_blank" class="nav-button">🚩 เปิดแผนที่ร้าน (222 ถ.เทศบาล 1)</a>''', unsafe_allow_html=True)
+        maps_link = "https://www.google.com/maps/place/222+Tesaban+1+Alley/@7.191528,100.598333,17z"
+        st.markdown(f'<a href="{maps_link}" target="_blank" class="nav-button">🚩 เปิดแผนที่ร้าน (222 ถ.เทศบาล 1)</a>', unsafe_allow_html=True)
 
 # --- หน้าจัดการร้าน (Admin) ---
 elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
-    st.subheader("📊 จัดการร้าน (Admin)")
+    st.subheader("📊 จัดการร้าน (Admin)") #
     df_bookings = get_data("Bookings")
     
     if not df_bookings.empty:
-        # ส่วนสำหรับการอัปเดตราคาและสถานะ
+        # ส่วนอัปเดตราคาและสถานะ
         with st.expander("✅ ยืนยันคิวและระบุราคา", expanded=True):
             edit_col1, edit_col2, edit_col3 = st.columns(3)
             with edit_col1:
@@ -122,16 +121,16 @@ elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
                 st.rerun()
 
         st.divider()
-        # ตารางแสดงผลพร้อมลิงก์แชทลูกค้า
         st.write("### 📝 รายการจองทั้งหมด")
         admin_df = df_bookings.copy()
-        # สร้างลิงก์สำหรับทักแชทลูกค้า (ตัวอย่างใช้เบอร์โทรเป็น ID LINE)
-        admin_df['chat'] = "https://line.me/ti/p/~" + admin_df['username'].astype(str)
+        
+        # เปลี่ยนจากลิงก์แชท เป็นลิงก์โทรหาลูกค้า (tel:)
+        admin_df['โทรหาลูกค้า'] = "tel:" + admin_df['username'].astype(str)
         
         st.dataframe(
-            admin_df[['id', 'username', 'fullname', 'date', 'time', 'service', 'status', 'price', 'chat']],
+            admin_df[['id', 'username', 'fullname', 'date', 'time', 'service', 'status', 'price', 'โทรหาลูกค้า']],
             column_config={
-                "chat": st.column_config.LinkColumn("💬 แชทกับลูกค้า")
+                "โทรหาลูกค้า": st.column_config.LinkColumn("📞 กดเพื่อโทร")
             },
             use_container_width=True,
             hide_index=True
@@ -139,7 +138,7 @@ elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
     else:
         st.info("ยังไม่มีข้อมูลการจอง")
 
-# --- หน้าเข้าสู่ระบบ (Login) ---
+# --- หน้าเข้าสู่ระบบ ---
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
     u_in = st.text_input("เบอร์โทรศัพท์").strip()
@@ -156,7 +155,7 @@ elif st.session_state.page == "Login":
                 navigate("Booking")
             else: st.error("ข้อมูลไม่ถูกต้อง")
 
-# --- หน้าสมัครสมาชิก (Register) ---
+# --- หน้าสมัครสมาชิก ---
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
     with st.form("reg_form"):
@@ -167,7 +166,7 @@ elif st.session_state.page == "Register":
             conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
             st.success("ลงทะเบียนสำเร็จ!"); navigate("Login")
 
-# --- หน้าจองคิว (Booking) ---
+# --- หน้าจองคิว ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     st.subheader(f"✂️ จองคิว: คุณ {st.session_state.fullname}")
     with st.form("b_form"):
@@ -180,7 +179,7 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
             conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
             st.success("จองสำเร็จ!"); navigate("Home")
 
-# --- หน้าดูคิววันนี้ (ViewQueues) ---
+# --- หน้าคิววันนี้ ---
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิววันนี้")
     df_today = get_data("Bookings")
