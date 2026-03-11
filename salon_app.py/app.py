@@ -3,7 +3,6 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 import uuid
-import streamlit.components.v1 as components
 
 # --- 1. CONFIG & STYLING ---
 st.set_page_config(page_title="222-Salon-Final", layout="wide", initial_sidebar_state="collapsed")
@@ -19,6 +18,7 @@ st.markdown("""
             box-shadow: 2px 4px 12px rgba(0,0,0,0.08); color: #000000 !important;
         }
         .price-text { float: right; color: #FF4B4B; font-weight: bold; }
+        .contact-section { background-color: #f9f9f9; padding: 20px; border-radius: 15px; text-align: center; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -83,20 +83,14 @@ if st.session_state.page == "Home":
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
 
     st.divider()
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.subheader("📞 ติดต่อเรา")
-        st.write("📱 **เบอร์โทร:** 081-222-2222")
-        st.write("💬 **LINE ID:** @222salon")
-        st.write("🔵 **Facebook:** 222 Salon")
-    with c2:
-        st.subheader("📍 พิกัดร้าน")
-        # Google Maps Embed (222 ถนน เทศบาล 1)
-        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.5025114138!2d100.5!3d13.75!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDQ1JzAwLjAiTiAxMDDCsDMwJzAwLjAiRQ!5e0!3m2!1sth!2sth!4v1640000000000"
-        components.html(
-            f'<iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', 
-            height=240
-        )
+    # ปรับส่วนติดต่อเราให้ขยายกว้างขึ้นแทนที่แผนที่
+    st.markdown("""
+        <div class="contact-section">
+            <h3>📞 ติดต่อเรา</h3>
+            <p><b>📱 เบอร์โทร:</b> 081-222-2222 &nbsp; | &nbsp; <b>💬 LINE ID:</b> @222salon &nbsp; | &nbsp; <b>🔵 Facebook:</b> 222 Salon</p>
+            <p>📍 พิกัด: 222 ถนน เทศบาล 1 (ใกล้ศาลาว่าการ)</p>
+        </div>
+    """, unsafe_allow_html=True)
 
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
