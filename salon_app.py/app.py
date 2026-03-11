@@ -23,6 +23,11 @@ st.markdown("""
             text-align: center; background: #FF4B4B; color: white; padding: 15px;
             border-radius: 10px; margin-bottom: 20px; box-shadow: 2px 4px 8px rgba(0,0,0,0.1);
         }
+        .contact-box {
+            text-align: center; background-color: #ffffff !important; padding: 20px; 
+            border-radius: 15px; box-shadow: 2px 4px 10px rgba(0,0,0,0.1); color: #000000 !important;
+            border: 1px solid #eee; height: 100%;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -80,27 +85,39 @@ st.divider()
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (หยุดทุกวันพุธ)")
+    
     st.subheader("📋 บริการและราคา")
     services = {"✂️ ตัดผมชาย": "150-350 บ.", "💇‍♀️ ตัดผมหญิง": "350-800 บ.", "🚿 สระ-ไดร์": "200-450 บ.", "🎨 ทำสีผม": "1,500 บ.+", "✨ ยืด/ดัด": "1,000 บ.+", "🌿 ทรีทเม้นท์": "500 บ.+"}
     p1, p2 = st.columns(2)
     for i, (name, price) in enumerate(services.items()):
         target = p1 if i % 2 == 0 else p2
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
+    
+    st.divider()
+    st.subheader("📞 ติดต่อเรา & แผนที่")
+    c1, c2, c3 = st.columns(3)
+    with c1: st.markdown("<div class='contact-box'><h3>📞 โทร</h3><p>081-222-2222</p></div>", unsafe_allow_html=True)
+    with c2: st.markdown("<div class='contact-box'><h3>💬 Line</h3><p>@222salon</p></div>", unsafe_allow_html=True)
+    with c3: st.markdown("<div class='contact-box'><h3>📍 ที่ตั้ง</h3><p>222 ซอย.พิรม สงขลา.</p></div>", unsafe_allow_html=True)
+    
+    st.write("")
+    # ปุ่มนำทาง GPS
+    st.link_button("📍 นำทางด้วย Google Maps (GPS)", "https://www.google.com/maps/search/?api=1&query=Songkhla", type="primary", use_container_width=True)
 
 # --- หน้า Register (สมัครสมาชิก) ---
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิกใหม่")
     with st.form("reg_form"):
-        nu = st.text_input("เบอร์โทรศัพท์ (ใช้เข้าสู่ระบบ)").strip()
+        nu = st.text_input("เบอร์โทรศัพท์").strip()
         nf = st.text_input("ชื่อ-นามสกุล").strip()
         np = st.text_input("รหัสผ่าน", type="password").strip()
-        np_confirm = st.text_input("ยืนยันรหัสผ่าน", type="password").strip()
+        np_confirm = st.text_input("ยืนยันรหัสผ่านอีกครั้ง", type="password").strip()
         
         if st.form_submit_button("ลงทะเบียน"):
             if not nu or not nf or not np:
                 st.error("⚠️ กรุณากรอกข้อมูลให้ครบถ้วน")
             elif np != np_confirm:
-                st.error("❌ รหัสผ่านไม่ตรงกัน")
+                st.error("❌ รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง")
             else:
                 df_u = get_data("Users")
                 if not df_u.empty and nu in df_u['phone'].values:
@@ -135,7 +152,7 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
     with t1:
         with st.form("booking_form"):
             b_date = st.date_input("เลือกวันที่")
-            b_time = st.selectbox("เวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
+            b_time = st.selectbox("เลือกเวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
             b_service = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
             if st.form_submit_button("ยืนยันการจอง"):
                 df_b = get_data("Bookings")
@@ -146,7 +163,7 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
         df_b = get_data("Bookings")
         if not df_b.empty:
             my_qs = df_b[df_b['username'] == st.session_state.username]
-            if my_qs.empty: st.write("ไม่มีข้อมูลการจอง")
+            if my_qs.empty: st.write("ยังไม่มีประวัติการจอง")
             for _, row in my_qs.iterrows():
                 with st.container(border=True):
                     st.write(f"**{row['service']}** | 📅 {row['date']} ⏰ {row['time']}")
@@ -167,32 +184,33 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
     else:
         income, wait_q = 0, 0
 
-    # แดชบอร์ดสรุปผล
+    # แสดงยอด Dashboard
     sum1, sum2 = st.columns(2)
     sum1.markdown(f"<div class='summary-box'><h3>📅 คิวรอวันนี้</h3><h2>{wait_q} คิว</h2></div>", unsafe_allow_html=True)
     sum2.markdown(f"<div class='summary-box' style='background:#28a745;'><h3>💰 ยอดเงินวันนี้</h3><h2>{income:,.2f} บาท</h2></div>", unsafe_allow_html=True)
 
-    st.subheader("📋 รายการลูกค้าวันนี้")
+    st.subheader("📋 จัดการคิวลูกค้าวันนี้")
     if not df_b.empty:
         pending_qs = df_b[(df_b['status'] == "รอรับบริการ") & (df_b['date'] == today_str)]
         if pending_qs.empty:
-            st.info("ไม่มีคิวค้างในขณะนี้")
+            st.info("ไม่มีคิวค้างในวันนี้")
         for _, row in pending_qs.iterrows():
             with st.container(border=True):
                 c_info, c_price, c_btn = st.columns([2, 1, 1])
-                c_info.write(f"👤 **{row['fullname']}** ({row['service']}) ⏰ {row['time']}")
+                c_info.write(f"👤 **{row['fullname']}** ({row['service']})")
+                c_info.write(f"⏰ {row['time']} | {row['date']}")
                 
-                # ช่องกรอกราคา (Admin สามารถแก้ไขได้)
-                new_p = c_price.number_input("ราคาเรียกเก็บจริง", min_value=0, value=0, key=f"inp_{row['id']}")
+                # ช่องกรอกราคาเรียกเก็บจริง
+                new_p = c_price.number_input("ราคาเรียกเก็บจริง (บาท)", min_value=0, value=0, key=f"inp_{row['id']}")
                 
-                if c_btn.button("✅ จบงาน", key=f"fin_{row['id']}"):
+                if c_btn.button("✅ บันทึก & จบงาน", key=f"fin_{row['id']}"):
                     df_b.loc[df_b['id'] == row['id'], 'status'] = "รับบริการเสร็จสิ้น"
                     df_b.loc[df_b['id'] == row['id'], 'price'] = str(new_p)
                     conn.update(worksheet="Bookings", data=df_b)
-                    st.success(f"บันทึกยอดเงิน {new_p} บาทสำเร็จ")
+                    st.success(f"บันทึกยอดเงิน {new_p} บาท เรียบร้อย!")
                     time.sleep(0.5); st.rerun()
 
-# --- หน้า ViewQueues (คิววันนี้สำหรับทุกคน) ---
+# --- หน้า ViewQueues (คิววันนี้สำหรับบุคคลทั่วไป) ---
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 ตารางคิววันนี้")
     df_b = get_data("Bookings")
