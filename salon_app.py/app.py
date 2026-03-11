@@ -22,9 +22,9 @@ st.markdown("""
             display: block; background-color: #FF4B4B; color: white !important; 
             padding: 15px; border-radius: 12px; text-align: center; 
             font-weight: bold; font-size: 18px; text-decoration: none;
-            box-shadow: 2px 4px 10px rgba(0,0,0,0.2); transition: 0.3s;
+            box-shadow: 0px 4px 15px rgba(255, 75, 75, 0.3); transition: 0.3s;
         }
-        .nav-button:hover { background-color: #d43f3f; transform: scale(1.02); color: white !important; }
+        .nav-button:hover { background-color: #d43f3f; transform: translateY(-2px); color: white !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -50,7 +50,7 @@ def navigate(p):
 
 st.markdown("<h1 class='main-header'>✂️ 222-Salon</h1>", unsafe_allow_html=True)
 
-# แถบเมนู
+# เมนูนำทางด้านบน
 m_cols = st.columns(5)
 with m_cols[0]:
     if st.button("🏠 หน้าแรก"): navigate("Home")
@@ -98,15 +98,16 @@ if st.session_state.page == "Home":
     
     with c2:
         st.subheader("📍 พิกัดร้าน")
-        # ลิงก์ตรงปักหมุดพิกัด 7.191528, 100.598333 (ตรงตามรูปภาพ Google Maps)
-        maps_link = "https://www.google.com/maps/place/7%C2%B011'29.5%22N+100%C2%B035'54.0%22E/@7.191528,100.598333,17z"
+        # ลิงก์พิกัดเจาะจงที่ 222 ถนนเทศบาล 1 (7.191528, 100.598333) ตามรูปภาพล่าสุดของคุณ
+        maps_link = "https://www.google.com/maps/place/222+Tesaban+1+Alley,+Tambon+Bo+Yang,+Amphoe+Mueang+Songkhla,+Chang+Wat+Songkhla+90000"
         
         st.markdown(f'''
             <a href="{maps_link}" target="_blank" class="nav-button">
-                🚩 กดเปิด Google Maps <br> (นำทางไปที่ร้าน 222)
+                🚩 กดเพื่อเปิด Google Maps <br>
+                (ตำแหน่ง 222 ถนนเทศบาล 1)
             </a>
             <p style="text-align: center; font-size: 13px; color: gray; margin-top: 10px;">
-                เลขที่ 222 ถนนเทศบาล 1 ต.บ่อยาง อ.เมืองสงขลา
+                🏠 เลขที่ 222 ถนนเทศบาล 1 ต.บ่อยาง <br> อ.เมืองสงขลา จ.สงขลา 90000
             </p>
         ''', unsafe_allow_html=True)
 
@@ -125,7 +126,7 @@ elif st.session_state.page == "Register":
                 else:
                     new_u = pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])
                     conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
-                    st.success("✅ ลงทะเบียนสำเร็จ!"); navigate("Login")
+                    st.success("✅ สมัครสมาชิกสำเร็จ!"); navigate("Login")
             else: st.error("❌ ข้อมูลไม่ครบหรือรหัสผ่านไม่ตรงกัน")
 
 # --- หน้าเข้าสู่ระบบ (Login) ---
@@ -143,40 +144,32 @@ elif st.session_state.page == "Login":
             if not user.empty:
                 st.session_state.update({'logged_in': True, 'user_role': 'user', 'username': u_in, 'fullname': user.iloc[0]['fullname']})
                 navigate("Booking")
-            else: st.error("❌ เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง")
+            else: st.error("❌ ข้อมูลไม่ถูกต้อง")
 
 # --- หน้าจองคิว (Booking) ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     st.subheader(f"✂️ จองคิว: คุณ {st.session_state.fullname}")
-    t1, t2 = st.tabs(["🆕 จองคิวใหม่", "📋 ประวัติการจอง"])
-    
-    with t1:
-        with st.form("b_form"):
-            b_d = st.date_input("เลือกวันที่", min_value=datetime.now().date())
-            b_t = st.selectbox("เวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
-            b_s = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
-            if st.form_submit_button("ยืนยันการจอง"):
-                if b_d.weekday() == 5: 
-                    st.error("❌ ร้านหยุดวันเสาร์ กรุณาเลือกวันอื่น")
-                else:
-                    df_all = get_data("Bookings")
-                    new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
-                    conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
-                    st.success("✅ จองสำเร็จ!"); st.balloons()
-    with t2:
-        df_history = get_data("Bookings")
-        if not df_history.empty:
-            my_qs = df_history[df_history['username'] == st.session_state.username]
-            st.dataframe(my_qs, use_container_width=True)
+    with st.form("b_form"):
+        b_d = st.date_input("เลือกวันที่", min_value=datetime.now().date())
+        b_t = st.selectbox("เวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
+        b_s = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
+        if st.form_submit_button("ยืนยันการจอง"):
+            if b_d.weekday() == 5: 
+                st.error("❌ ร้านหยุดวันเสาร์")
+            else:
+                df_all = get_data("Bookings")
+                new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
+                conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
+                st.success("✅ จองสำเร็จ!"); st.balloons()
 
-# --- หน้าผู้ดูแลระบบ (Admin) ---
+# --- หน้าแอดมิน (Admin) ---
 elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
-    st.subheader("📊 รายการจองทั้งหมด (Admin)")
+    st.subheader("📊 จัดการร้าน (Admin)")
     df_admin = get_data("Bookings")
     if not df_admin.empty:
         st.dataframe(df_admin, use_container_width=True)
 
-# --- หน้าดูคิววันนี้ (Public) ---
+# --- หน้าดูคิววันนี้ (ViewQueues) ---
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิววันนี้")
     df_today = get_data("Bookings")
@@ -185,4 +178,4 @@ elif st.session_state.page == "ViewQueues":
         active = df_today[(df_today['date'] == t_str) & (df_today['status'] != "ยกเลิก")]
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
-        else: st.info("วันนี้ยังไม่มีคิว")
+        else: st.info("วันนี้ยังไม่มีการจองคิว")
