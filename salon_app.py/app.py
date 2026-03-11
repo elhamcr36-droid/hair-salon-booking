@@ -90,15 +90,14 @@ if st.session_state.page == "Home":
         st.write("🔵 **Facebook:** 222 Salon")
     
     with c2:
-        st.subheader("📍 พิกัดร้าน (สงขลา)")
-        # พิกัด 222 ถนนเทศบาล 1 ต.บ่อยาง อ.เมืองสงขลา
-        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.0123456789!2d100.595460!3d7.202345!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x304d284f6c400001%3A0x0!2zMjIyIOC4luC4meC4mSDguYDguJfguLguOC4muC4pOC4p9C4p9C4pSAx!5e0!3m2!1sth!2sth!4v1700000000000"
+        st.subheader("📍 พิกัดร้าน")
+        # ลิงก์แผนที่ Google Maps สำหรับ 222 ถนนเทศบาล 1 จ.สงขลา
+        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.123456789!2d100.5954!3d7.2104!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3034d3f3f0000001%3A0x0!2zMjIyIOC4luC4meC4mSDguYDguJfguLguOC4muC4pOC4p9C4p9C4seC4mSAx!5e0!3m2!1sth!2sth!4v1700000000000"
         
         components.html(
             f'<iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', 
             height=240
         )
-
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
     with st.form("reg_form"):
@@ -248,3 +247,4 @@ elif st.session_state.page == "ViewQueues":
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
         else: st.info(f"ไม่มีการจองในวันนี้ ({today_str})")
+
