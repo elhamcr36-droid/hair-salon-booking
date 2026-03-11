@@ -7,7 +7,7 @@ from datetime import datetime
 st.set_page_config(page_title="222-Salon", layout="wide", initial_sidebar_state="collapsed")
 
 # 📍 ลิงก์แผนที่ร้าน
-SHOP_LOCATION_URL = "https://goo.gl/maps/your-actual-link" 
+SHOP_LOCATION_URL = "https://www.google.com/maps/place/222+%E0%B8%96%E0%B8%99%E0%B8%99+%E0%B9%80%E0%B8%97%E0%B8%A8%E0%B8%9A%E0%B8%B2%E0%B8%A5+1+%E0%B8%95%E0%B8%B3%E0%B8%9A%E0%B8%A5%E0%B8%9A%E0%B9%88%E0%B8%AD%E0%B8%A2%E0%B8%B2%E0%B8%87+%E0%B8%AD%E0%B8%B3%E0%B9%80%E0%B8%A0%E0%B8%AD%E0%B9%80%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%87%E0%B8%AA%E0%B8%87%E0%B8%82%E0%B8%A5%E0%B8%B2+%E0%B8%AA%E0%B8%87%E0%B8%82%E0%B8%A5%E0%B8%B2+90000/@7.1954797,100.6083957,15z/data=!4m6!3m5!1s0x304d3323c7ad029d:0x7cfb098f4f859e4c!8m2!3d7.1915128!4d100.6007972!16s%2Fg%2F11jylj3r6y?entry=ttu&g_ep=EgoyMDI2MDMwOC4wIKXMDSoASAFQAw%3D%3D" 
 
 st.markdown("""
     <style>
@@ -266,3 +266,4 @@ elif st.session_state.page == "ViewQueues":
     if not active_q.empty:
         st.dataframe(active_q[['time', 'service']].sort_values('time'), use_container_width=True)
     else: st.write("ยังไม่มีคนจองคิววันนี้")
+
