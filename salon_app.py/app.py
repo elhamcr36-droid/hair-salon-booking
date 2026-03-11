@@ -70,6 +70,7 @@ st.divider()
 
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
+    # แถบเวลาเปิด-ปิด จะแสดงเฉพาะหน้าแรกเพื่อให้ลูกค้าทราบเท่านั้น
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (หยุดทุกวันพุธ)")
     services = {"✂️ ตัดผมชาย": "150-350 บ.", "💇‍♀️ ตัดผมหญิง": "350-800 บ.", "🚿 สระ-ไดร์": "200-450 บ.", "🎨 ทำสีผม": "1,500 บ.+", "✨ ยืด/ดัด": "1,000 บ.+", "🌿 ทรีทเม้นท์": "500 บ.+"}
     p1, p2 = st.columns(2)
@@ -107,7 +108,7 @@ elif st.session_state.page == "Login":
                 navigate("Booking")
             else: st.error("❌ ข้อมูลไม่ถูกต้อง")
 
-# --- USER PAGE: ลบช่องแสดงเบอร์โทรออก ---
+# --- หน้าลูกค้า ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิว", "💬 แชทกับร้าน"])
     with t1:
@@ -143,18 +144,18 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
                 chat_c.chat_message("user").write(m['message'])
                 if m['admin_reply']: chat_c.chat_message("assistant").info(m['admin_reply'])
         with st.form("send_m", clear_on_submit=True):
-            # ไม่ต้องมีช่องกรอก Username เพราะดึงจากระบบอัตโนมัติ
             msg = st.text_input("พิมพ์ข้อความตอบโต้กับร้าน...")
             if st.form_submit_button("ส่ง") and msg:
                 new_m = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "message": msg, "timestamp": datetime.now().strftime("%H:%M"), "admin_reply": ""}])
                 conn.update(worksheet="Messages", data=pd.concat([df_m, new_m], ignore_index=True))
                 st.rerun()
 
-# --- ADMIN PAGE: ลบช่องแสดงเบอร์โทร Admin ออก ---
+# --- หน้าแอดมิน (จัดการร้าน) ---
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
     at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 แชทลูกค้า"])
     df_b = get_data("Bookings")
     with at1:
+        # ลบแถบสีน้ำเงินเวลาเปิดร้านและช่องเบอร์โทรออกแล้ว
         if not df_b.empty:
             df_b['price'] = pd.to_numeric(df_b['price'], errors='coerce').fillna(0)
             st.metric("รายได้รวม", f"{df_b[df_b['status']=='เสร็จสิ้น']['price'].sum():,.0f} บ.")
@@ -175,7 +176,6 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
     with at3:
         df_m = get_data("Messages")
         if not df_m.empty:
-            # ใช้ selectbox เพื่อเลือกคุยกับลูกค้าแต่ละคน โดยไม่ต้องแสดงเบอร์ admin ค้างไว้
             sel_u = st.selectbox("เลือกแชทลูกค้าเพื่อตอบกลับ", df_m['username'].unique())
             for _, m in df_m[df_m['username'] == sel_u].iterrows():
                 st.write(f"👤 {sel_u}: {m['message']}")
