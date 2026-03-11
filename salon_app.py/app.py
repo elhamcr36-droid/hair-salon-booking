@@ -91,7 +91,7 @@ if st.session_state.page == "Home":
     with c2:
         # --- แก้ไขจุดที่มีปัญหา Indentation และใส่พิกัดจริง ---
         st.subheader("📍 พิกัดร้าน")
-        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15501.99615555462!2d100.523186!3d13.748529!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30e29930f7e4e6b3%3A0x6334a905a8f09d84!2zMjIyIOCWS-C4meC4mSDguLmA4LiX4Lio4Lia4Liy4LilIDE!5e0!3m2!1sth!2sth!4v1710165000000!5m2!1sth!2sth"
+        map_url = "https://maps.app.goo.gl/XywUWxSrE8bDwd3q8"
     components.html(
         f'<iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', 
         height=240
@@ -255,6 +255,7 @@ elif st.session_state.page == "ViewQueues":
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
         else: st.info(f"ไม่มีการจองในวันนี้ ({today_str})")
+
 
 
 
