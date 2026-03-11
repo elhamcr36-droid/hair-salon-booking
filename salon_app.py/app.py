@@ -6,7 +6,6 @@ from datetime import datetime
 # --- 1. SETTINGS & CSS ---
 st.set_page_config(page_title="222-Salon", layout="wide", initial_sidebar_state="collapsed")
 
-# 📍 ลิงก์แผนที่ร้าน
 SHOP_LOCATION_URL = "https://goo.gl/maps/example" 
 
 st.markdown("""
@@ -15,8 +14,6 @@ st.markdown("""
         .main-header {text-align: center; color: #FF4B4B; font-weight: bold; margin-bottom: 20px;}
         .stButton>button {width: 100%; border-radius: 10px; font-weight: bold; transition: 0.3s;}
         .stButton>button:hover {background-color: #FF4B4B; color: white;}
-        
-        /* 📋 Cards Styling */
         .price-card {
             background-color: #ffffff !important; padding: 15px; border-radius: 12px;
             border-left: 6px solid #FF4B4B; margin-bottom: 10px;
@@ -24,25 +21,18 @@ st.markdown("""
         }
         .price-card b { color: #000000 !important; display: block; font-size: 1.1rem; }
         .price-text { color: #FF4B4B !important; font-weight: bold; }
-
         .contact-box {
             text-align: center; background-color: #ffffff !important; padding: 20px; 
             border-radius: 15px; box-shadow: 2px 4px 10px rgba(0,0,0,0.1); color: #1A1A1A !important;
         }
         .contact-box h3 { color: #FF4B4B !important; }
-        
         .booking-item {
             background-color: #ffffff; color: #333; padding: 15px;
             border-radius: 10px; margin-bottom: 10px; border: 1px solid #ddd;
         }
-        .metric-card {
-            background-color: #ffffff; padding: 20px; border-radius: 15px;
-            border: 2px solid #FF4B4B; text-align: center; color: #1A1A1A !important; font-weight: bold;
-        }
     </style>
 """, unsafe_allow_html=True)
 
-# เชื่อมต่อ Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data(sheet_name):
@@ -61,7 +51,6 @@ def get_data(sheet_name):
         return df
     except: return pd.DataFrame()
 
-# --- 2. NAVIGATION ---
 if 'page' not in st.session_state: st.session_state.page = "Home"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
@@ -69,7 +58,6 @@ def navigate(p):
     st.session_state.page = p
     st.rerun()
 
-# --- TOP MENU BAR ---
 st.markdown("<h1 class='main-header'>✂️ 222-Salon</h1>", unsafe_allow_html=True)
 m_cols = st.columns(5)
 with m_cols[0]:
@@ -77,9 +65,14 @@ with m_cols[0]:
 with m_cols[1]:
     if st.button("📅 คิววันนี้"): navigate("ViewQueues")
 
+# ส่วนที่แก้ไข Syntax Error
 if not st.session_state.logged_in:
-    with m_cols[3]: if st.button("📝 สมัคร"): navigate("Register")
-    with m_cols[4]: if st.button("🔑 เข้าสู่ระบบ"): navigate("Login")
+    with m_cols[3]: 
+        if st.button("📝 สมัคร"): 
+            navigate("Register")
+    with m_cols[4]: 
+        if st.button("🔑 เข้าสู่ระบบ"): 
+            navigate("Login")
 else:
     role = st.session_state.get('user_role')
     with m_cols[2]:
@@ -110,7 +103,6 @@ if st.session_state.page == "Home":
     with c1: st.markdown("<div class='contact-box'><h3>📞 โทร</h3><p>081-222-XXXX</p></div>", unsafe_allow_html=True)
     with c2: st.markdown("<div class='contact-box'><h3>💬 Line</h3><p>@222salon</p></div>", unsafe_allow_html=True)
     with c3: st.markdown("<div class='contact-box'><h3>📍 ที่ตั้ง</h3><p>ย่านสุขุมวิท กทม.</p></div>", unsafe_allow_html=True)
-    st.write("")
     st.link_button("📍 นำทางไปที่ร้าน (Google Maps)", SHOP_LOCATION_URL, type="primary", use_container_width=True)
 
 # --- 4. PAGE: BOOKING (Customer) ---
@@ -136,9 +128,10 @@ elif st.session_state.page == "Booking":
         for _, row in my_q.iterrows():
             ci, cb = st.columns([4, 1])
             ci.markdown(f"<div class='booking-item'><b>{row['date']} | {row['time']}</b><br>{row['service']} ({row['status']})</div>", unsafe_allow_html=True)
-            if row['status'] == 'รอรับบริการ' and cb.button("❌", key=f"c_{row['id']}"):
-                df_b.loc[df_b['id'] == row['id'], 'status'] = 'ยกเลิก'
-                conn.update(worksheet="Bookings", data=df_b); st.rerun()
+            if row['status'] == 'รอรับบริการ':
+                if cb.button("❌", key=f"c_{row['id']}"):
+                    df_b.loc[df_b['id'] == row['id'], 'status'] = 'ยกเลิก'
+                    conn.update(worksheet="Bookings", data=df_b); st.rerun()
 
     with t3:
         st.subheader("💬 สนทนากับร้าน")
