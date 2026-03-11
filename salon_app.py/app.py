@@ -29,7 +29,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# เชื่อมต่อ Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data(sheet_name):
@@ -38,9 +37,7 @@ def get_data(sheet_name):
         df = df.dropna(how='all')
         df.columns = [str(c).strip().lower() for c in df.columns]
         for col in df.columns:
-            # ล้างข้อมูลทศนิยมและค่าว่าง
             df[col] = df[col].astype(str).str.strip().replace(r'\.0$', '', regex=True).replace('nan', '')
-            # บังคับเบอร์โทรให้มี 10 หลัก (เติม 0 ข้างหน้าถ้าหายไป)
             if 'phone' in col or 'username' in col:
                 df[col] = df[col].apply(lambda x: '0' + x if len(x) == 9 and x.isdigit() else x)
         return df
@@ -105,12 +102,16 @@ if st.session_state.page == "Home":
     with c1: st.markdown("<div class='contact-box'><h3>📞 โทร</h3><p>081-222-XXXX</p></div>", unsafe_allow_html=True)
     with c2: st.markdown("<div class='contact-box'><h3>💬 Line</h3><p>@222salon</p></div>", unsafe_allow_html=True)
     with c3: st.markdown("<div class='contact-box'><h3>📍 ที่ตั้ง</h3><p>ย่านสุขุมวิท กทม.</p></div>", unsafe_allow_html=True)
+    
+    # --- ปุ่ม GPS ที่เพิ่มกลับมา ---
+    st.write("")
+    st.link_button("📍 นำทางด้วย Google Maps (GPS)", "https://goo.gl/maps/YOUR_LINK_HERE", type="primary", use_container_width=True)
 
 # --- หน้า Login ---
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
     with st.container(border=True):
-        u_in = st.text_input("เบอร์โทรศัพท์", placeholder="เช่น 0812345678").strip()
+        u_in = st.text_input("เบอร์โทรศัพท์").strip()
         p_in = st.text_input("รหัสผ่าน", type="password").strip()
         if st.button("Login", type="primary"):
             if u_in == "admin222" and p_in == "222":
@@ -148,7 +149,7 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
         with chat_box:
             my_msgs = df_m[df_m['username'] == st.session_state.username]
             if my_msgs.empty:
-                st.write("ยังไม่มีข้อความ... เริ่มคุยกับเราได้เลย!")
+                st.write("ยังไม่มีข้อความ...")
             else:
                 for _, m in my_msgs.iterrows():
                     col_m, col_d = st.columns([5, 1])
@@ -156,12 +157,12 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
                         with st.chat_message("user"):
                             st.write(m['message'])
                             st.caption(f"🕒 {m['timestamp']}")
-                        if m.get('admin_reply'):
-                            with st.chat_message("assistant", avatar="✂️"): st.write(m['admin_reply'])
                     if col_d.button("🗑️", key=f"del_{m['id']}"):
                         df_m = df_m[df_m['id'] != m['id']]
                         conn.update(worksheet="Messages", data=df_m); st.rerun()
-
+                    if m.get('admin_reply'):
+                        with st.chat_message("assistant", avatar="✂️"): st.write(m['admin_reply'])
+        
         with st.form("send_msg", clear_on_submit=True):
             m_text = st.text_input("พิมพ์ข้อความ...")
             if st.form_submit_button("ส่ง"):
@@ -172,20 +173,12 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
 # --- หน้า Admin (จัดการคิวและแชทด้วยชื่อลูกค้า) ---
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
     at1, at2 = st.tabs(["📅 คิวลูกค้า", "📩 แชทลูกค้า"])
-    
-    with at1:
-        df_b = get_data("Bookings")
-        st.dataframe(df_b, use_container_width=True)
-
     with at2:
         df_m = get_data("Messages")
         df_u = get_data("Users")
         if not df_m.empty:
-            # สร้างแผนผังชื่อลูกค้า
             user_map = dict(zip(df_u['phone'], df_u['fullname']))
             unique_users = [u for u in df_m['username'].unique() if u != 'Admin']
-            
-            # ตัวเลือกชื่อลูกค้าใน Selectbox
             options = {u: f"{user_map.get(u, 'ลูกค้าใหม่')} ({u})" for u in unique_users}
             if options:
                 sel_u = st.selectbox("เลือกแชทลูกค้า:", options.keys(), format_func=lambda x: options[x])
@@ -205,4 +198,4 @@ elif st.session_state.page == "ViewQueues":
     st.subheader("📅 คิววันนี้")
     df_b = get_data("Bookings")
     active = df_b[df_b['date'] == datetime.now().strftime("%Y-%m-%d")]
-    st.table(active[['time', 'service']]) if not active.empty else st.write("ยังไม่มีคิวจอง")
+    st.table(active[['time', 'service']]) if not active.empty else st.write("ไม่มีคิว")
