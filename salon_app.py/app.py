@@ -5,7 +5,7 @@ from datetime import datetime
 import uuid
 
 # --- 1. CONFIG & STYLING ---
-st.set_page_config(page_title="222-Salon-Ultimate", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="222-Salon-Ultimate-Fix", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -31,6 +31,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data(sheet_name):
     try:
+        # ดึงข้อมูลใหม่เสมอ (ttl=0) เพื่อให้ล็อกอินได้ทันทีหลังสมัคร
         df = conn.read(worksheet=sheet_name, ttl="0s")
         if df is None or df.empty: return pd.DataFrame()
         df = df.dropna(how='all')
@@ -72,7 +73,7 @@ st.divider()
 
 # --- 4. PAGE LOGIC ---
 
-# --- หน้าแรก (Home) ---
+# --- หน้าแรก ---
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (⚠️ หยุดทุกวันเสาร์)")
@@ -92,9 +93,68 @@ if st.session_state.page == "Home":
         st.write("💬 **LINE ID:** @222salon")
     with c2:
         st.subheader("📍 พิกัดร้าน")
-        # พิกัด 222 ถนนเทศบาล 1 ตามรูปภาพ
-        maps_link = "https://www.google.com/maps/place/222+ถ.+เทศบาล+1+ตำบลบ่อยาง+อำเภอเมืองสงขลา+สงขลา+90000"
+        # พิกัด 222 ถนนเทศบาล 1 (สงขลา)
+        maps_link = "https://www.google.com/maps/search/?api=1&query=7.1915128,100.5983227"
         st.markdown(f'<a href="{maps_link}" target="_blank" class="nav-button">🚩 เปิดแผนที่ร้าน (222 ถ.เทศบาล 1)</a>', unsafe_allow_html=True)
+
+# --- หน้าสมัครสมาชิก (Register) ---
+elif st.session_state.page == "Register":
+    st.subheader("📝 สมัครสมาชิก")
+    with st.form("reg_form"):
+        nf = st.text_input("ชื่อ-นามสกุล")
+        nu = st.text_input("เบอร์โทรศัพท์ (จะใช้เป็นชื่อล็อกอิน)")
+        np = st.text_input("กำหนดรหัสผ่าน", type="password")
+        npc = st.text_input("ยืนยันรหัสผ่านอีกครั้ง", type="password")
+        
+        if st.form_submit_button("ลงทะเบียนใช้งาน"):
+            if not nf or not nu or not np:
+                st.error("กรุณากรอกข้อมูลให้ครบทุกช่อง")
+            elif np != npc:
+                st.error("❌ รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง")
+            else:
+                df_u = get_data("Users")
+                # เช็คว่าเบอร์นี้มีในระบบหรือยัง
+                if not df_u.empty and nu in df_u['phone'].astype(str).values:
+                    st.warning("เบอร์โทรนี้เคยลงทะเบียนไว้แล้ว")
+                else:
+                    new_u = pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])
+                    conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
+                    st.success("✅ สมัครสมาชิกเรียบรน์แล้ว! กรุณาเข้าสู่ระบบ")
+                    # หน่วงเวลาเล็กน้อยเพื่อให้ระบบอัปเดตก่อนไปหน้าล็อกอิน
+                    navigate("Login")
+
+# --- หน้าเข้าสู่ระบบ (Login) ---
+elif st.session_state.page == "Login":
+    st.subheader("🔑 เข้าสู่ระบบ")
+    u_in = st.text_input("เบอร์โทรศัพท์", placeholder="กรอกเบอร์ที่สมัครไว้").strip()
+    p_in = st.text_input("รหัสผ่าน", type="password").strip()
+    
+    if st.button("ตกลง", type="primary"):
+        # กรณี Admin
+        if u_in == "admin222" and p_in == "222":
+            st.session_state.update({'logged_in': True, 'user_role': 'admin', 'username': u_in, 'fullname': 'ผู้ดูแลระบบ'})
+            navigate("Admin")
+        else:
+            df_u = get_data("Users")
+            if not df_u.empty:
+                # แปลงข้อมูลเป็น string ทั้งหมดเพื่อป้องกันการเทียบค่าผิดประเภท
+                df_u['phone'] = df_u['phone'].astype(str)
+                df_u['password'] = df_u['password'].astype(str)
+                
+                user = df_u[(df_u['phone'] == u_in) & (df_u['password'] == p_in)]
+                
+                if not user.empty:
+                    st.session_state.update({
+                        'logged_in': True, 
+                        'user_role': user.iloc[0]['role'], 
+                        'username': u_in, 
+                        'fullname': user.iloc[0]['fullname']
+                    })
+                    navigate("Booking")
+                else:
+                    st.error("❌ เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง")
+            else:
+                st.error("ยังไม่มีข้อมูลผู้ใช้งานในระบบ")
 
 # --- หน้าจัดการร้าน (Admin) ---
 elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
@@ -102,28 +162,25 @@ elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
     df_bookings = get_data("Bookings")
     
     if not df_bookings.empty:
-        # ส่วนอัปเดตราคาและสถานะ
-        with st.expander("✅ ยืนยันคิวและระบุราคา", expanded=True):
+        with st.expander("✅ บันทึกราคาและเปลี่ยนสถานะ", expanded=True):
             edit_col1, edit_col2, edit_col3 = st.columns(3)
             with edit_col1:
-                selected_id = st.selectbox("เลือก ID คิวที่จะจัดการ", df_bookings['id'].tolist())
+                selected_id = st.selectbox("เลือก ID คิว", df_bookings['id'].tolist())
             with edit_col2:
-                input_price = st.text_input("ระบุราคาค่าบริการ (บาท)", "0")
+                input_price = st.text_input("ราคาค่าบริการ (บาท)", "0")
             with edit_col3:
-                input_status = st.selectbox("เปลี่ยนสถานะ", ["รอรับบริการ", "กำลังบริการ", "เสร็จสิ้น", "ยกเลิก"])
+                input_status = st.selectbox("สถานะ", ["รอรับบริการ", "กำลังบริการ", "เสร็จสิ้น", "ยกเลิก"])
             
             if st.button("💾 บันทึกข้อมูล"):
                 df_bookings.loc[df_bookings['id'] == selected_id, 'price'] = input_price
                 df_bookings.loc[df_bookings['id'] == selected_id, 'status'] = input_status
                 conn.update(worksheet="Bookings", data=df_bookings)
-                st.success(f"อัปเดตคิว {selected_id} สำเร็จ!")
+                st.success(f"อัปเดตข้อมูลคิว {selected_id} เรียบร้อย!")
                 st.rerun()
 
         st.divider()
         st.write("### 📝 รายการจองทั้งหมด")
         admin_df = df_bookings.copy()
-        
-        # เพิ่มลิงก์ทั้งโทรและแชท
         admin_df['โทรหา'] = "tel:" + admin_df['username'].astype(str)
         admin_df['แชท LINE'] = "https://line.me/ti/p/~" + admin_df['username'].astype(str)
         
@@ -131,52 +188,14 @@ elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
             admin_df[['id', 'username', 'fullname', 'date', 'time', 'service', 'status', 'price', 'โทรหา', 'แชท LINE']],
             column_config={
                 "โทรหา": st.column_config.LinkColumn("📞 กดเพื่อโทร"),
-                "แชท LINE": st.column_config.LinkColumn("💬 ทัก LINE")
+                "แชท LINE": st.column_config.LinkColumn("💬 ทักแชท")
             },
-            use_container_width=True,
-            hide_index=True
+            use_container_width=True, hide_index=True
         )
     else:
         st.info("ยังไม่มีข้อมูลการจอง")
 
-# --- หน้าสมัครสมาชิก (พร้อมระบบยืนยันรหัสผ่าน) ---
-elif st.session_state.page == "Register":
-    st.subheader("📝 สมัครสมาชิก")
-    with st.form("reg_form"):
-        nf = st.text_input("ชื่อ-นามสกุล")
-        nu = st.text_input("เบอร์โทรศัพท์ (Username)")
-        np = st.text_input("รหัสผ่าน", type="password")
-        npc = st.text_input("ยืนยันรหัสผ่าน", type="password") # เพิ่มช่องยืนยันรหัสผ่าน
-        
-        if st.form_submit_button("ลงทะเบียน"):
-            if not nf or not nu or not np:
-                st.error("กรุณากรอกข้อมูลให้ครบถ้วน")
-            elif np != npc:
-                st.error("❌ รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง")
-            else:
-                df_u = get_data("Users")
-                new_u = pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])
-                conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
-                st.success("✅ ลงทะเบียนสำเร็จ!"); navigate("Login")
-
-# --- หน้าเข้าสู่ระบบ ---
-elif st.session_state.page == "Login":
-    st.subheader("🔑 เข้าสู่ระบบ")
-    u_in = st.text_input("เบอร์โทรศัพท์").strip()
-    p_in = st.text_input("รหัสผ่าน", type="password").strip()
-    if st.button("ตกลง", type="primary"):
-        if u_in == "admin222" and p_in == "222":
-            st.session_state.update({'logged_in': True, 'user_role': 'admin', 'username': u_in, 'fullname': 'ผู้ดูแลระบบ'})
-            navigate("Admin")
-        else:
-            df_u = get_data("Users")
-            user = df_u[(df_u['phone'] == u_in) & (df_u['password'] == p_in)] if not df_u.empty else pd.DataFrame()
-            if not user.empty:
-                st.session_state.update({'logged_in': True, 'user_role': 'user', 'username': u_in, 'fullname': user.iloc[0]['fullname']})
-                navigate("Booking")
-            else: st.error("ข้อมูลไม่ถูกต้อง")
-
-# --- หน้าจองคิว ---
+# --- หน้าจองคิว (Booking) ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     st.subheader(f"✂️ จองคิว: คุณ {st.session_state.fullname}")
     with st.form("b_form"):
@@ -185,9 +204,15 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
         b_s = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
         if st.form_submit_button("ยืนยันการจอง"):
             df_all = get_data("Bookings")
-            new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
+            new_q = pd.DataFrame([{
+                "id": str(uuid.uuid4())[:8], 
+                "username": st.session_state.username, 
+                "fullname": st.session_state.fullname, 
+                "date": str(b_d), "time": b_t, 
+                "service": b_s, "status": "รอรับบริการ", "price": "0"
+            }])
             conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
-            st.success("จองสำเร็จ!"); navigate("Home")
+            st.success("จองคิวสำเร็จ!"); navigate("Home")
 
 # --- หน้าคิววันนี้ ---
 elif st.session_state.page == "ViewQueues":
