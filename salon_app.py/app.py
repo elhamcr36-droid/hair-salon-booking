@@ -5,7 +5,7 @@ from datetime import datetime
 import uuid
 
 # --- 1. CONFIG & STYLING ---
-st.set_page_config(page_title="222-Salon-Final-System", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="222-Salon-Ultimate", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -48,7 +48,6 @@ def navigate(p):
 
 st.markdown("<h1 class='main-header'>✂️ 222-Salon</h1>", unsafe_allow_html=True)
 
-# เมนูหลัก
 m_cols = st.columns(5)
 with m_cols[0]:
     if st.button("🏠 หน้าแรก"): navigate("Home")
@@ -93,13 +92,13 @@ if st.session_state.page == "Home":
         st.write("💬 **LINE ID:** @222salon")
     with c2:
         st.subheader("📍 พิกัดร้าน")
-        # ลิงก์พิกัดจากรูปภาพ Google Maps (222 ถ.เทศบาล 1)
-        maps_link = "https://www.google.com/maps/place/222+Tesaban+1+Alley/@7.191528,100.598333,17z"
+        # พิกัดตรงตามเลขที่ 222 ถ.เทศบาล 1
+        maps_link = "https://www.google.com/maps/place/222+Tesaban+1+Alley,+Tambon+Bo+Yang,+Amphoe+Mueang+Songkhla,+Chang+Wat+Songkhla+90000"
         st.markdown(f'<a href="{maps_link}" target="_blank" class="nav-button">🚩 เปิดแผนที่ร้าน (222 ถ.เทศบาล 1)</a>', unsafe_allow_html=True)
 
 # --- หน้าจัดการร้าน (Admin) ---
 elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
-    st.subheader("📊 จัดการร้าน (Admin)") #
+    st.subheader("📊 จัดการร้าน (Admin)")
     df_bookings = get_data("Bookings")
     
     if not df_bookings.empty:
@@ -124,13 +123,15 @@ elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
         st.write("### 📝 รายการจองทั้งหมด")
         admin_df = df_bookings.copy()
         
-        # เปลี่ยนจากลิงก์แชท เป็นลิงก์โทรหาลูกค้า (tel:)
+        # เพิ่มลิงก์ทั้งโทรและแชท
         admin_df['โทรหาลูกค้า'] = "tel:" + admin_df['username'].astype(str)
+        admin_df['แชทกับลูกค้า'] = "https://line.me/ti/p/~" + admin_df['username'].astype(str)
         
         st.dataframe(
-            admin_df[['id', 'username', 'fullname', 'date', 'time', 'service', 'status', 'price', 'โทรหาลูกค้า']],
+            admin_df[['id', 'username', 'fullname', 'date', 'time', 'service', 'status', 'price', 'โทรหาลูกค้า', 'แชทกับลูกค้า']],
             column_config={
-                "โทรหาลูกค้า": st.column_config.LinkColumn("📞 กดเพื่อโทร")
+                "โทรหาลูกค้า": st.column_config.LinkColumn("📞 กดเพื่อโทร"),
+                "แชทกับลูกค้า": st.column_config.LinkColumn("💬 ทัก LINE")
             },
             use_container_width=True,
             hide_index=True
