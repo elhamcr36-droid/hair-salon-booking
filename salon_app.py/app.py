@@ -91,7 +91,7 @@ if st.session_state.page == "Home":
    with c2:
         st.subheader("📍 พิกัดร้าน")
         # ลิงก์ที่แปลงเป็นรูปแบบ Embed สำหรับ 222 ถนน เทศบาล 1
-        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.52354504543!2d100.523186!3d13.75!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30e29930f3c5f95f%3A0x63345472856f4d2a!2zMjIyIOC4luC4meC4meC5gOC4l-C4qOC4muC4suC4pSAx!5e0!3m2!1sth!2sth!4v1710170000000!5m2!1sth!2sth"
+        map_url = ""
         
         components.html(
             f'<iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', 
@@ -256,6 +256,7 @@ elif st.session_state.page == "ViewQueues":
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
         else: st.info(f"ไม่มีการจองในวันนี้ ({today_str})")
+
 
 
 
