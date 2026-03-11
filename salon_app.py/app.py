@@ -90,7 +90,6 @@ if st.session_state.page == "Home":
         st.write("🔵 **Facebook:** 222 Salon")
     with c2:
         st.subheader("📍 พิกัดร้าน")
-        # เปลี่ยน URL ใน src="..." เป็นลิงก์ร้านของคุณจาก Google Maps
         map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.45!2d100.5!3d13.7!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDQyJzAwLjAiTiAxMDDCsDMwJzAwLjAiRQ!5e0!3m2!1sth!2sth!4v123456789"
         components.html(f'<iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', height=240)
 
@@ -133,15 +132,26 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
             b_s = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
             if st.form_submit_button("ยืนยัน"):
                 if b_d.weekday() == 5: 
-                    st.error("❌ ขออภัย ร้านหยุดทุกวันเสาร์ กรุณาเลือกวันอื่นครับ")
+                    st.error("❌ ร้านหยุดวันเสาร์ กรุณาเลือกวันอื่นครับ")
                 else:
                     df_all = get_data("Bookings")
-                    is_taken = df_all[(df_all['date'] == str(b_d)) & (df_all['time'] == b_t)] if not df_all.empty else pd.DataFrame()
-                    if is_taken.empty:
+                    
+                    # 1. ตรวจสอบว่า "เวลานี้" มีคนจองหรือยัง
+                    is_time_taken = df_all[(df_all['date'] == str(b_d)) & (df_all['time'] == b_t) & (df_all['status'] != 'ยกเลิก')] if not df_all.empty else pd.DataFrame()
+                    
+                    # 2. ตรวจสอบว่า "ลูกค้าคนนี้" มีคิวค้างอยู่ในวันนั้นแล้วหรือยัง (กันจองเบิ้ลหลายเวลาในวันเดียว)
+                    is_user_booked = df_all[(df_all['date'] == str(b_d)) & (df_all['username'] == st.session_state.username) & (df_all['status'] == 'รอรับบริการ')] if not df_all.empty else pd.DataFrame()
+
+                    if not is_time_taken.empty:
+                        st.error(f"❌ เวลา {b_t} ของวันที่ {b_d} มีผู้จองแล้วครับ")
+                    elif not is_user_booked.empty:
+                        st.warning(f"⚠️ คุณมีคิวที่รอรับบริการในวันที่ {b_d} อยู่แล้วครับ (ไม่สามารถจองซ้ำวันเดียวกันได้)")
+                    else:
                         new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
                         conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
                         st.success("✅ จองสำเร็จ!")
-                    else: st.error("❌ เวลานี้มีผู้จองแล้ว")
+                        st.balloons()
+    # (ส่วนที่เหลือของโค้ดคงเดิม...)
     with t2:
         st.subheader("📋 ประวัติการจองของคุณ")
         df_history = get_data("Bookings")
@@ -173,14 +183,12 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
 
 elif st.session_state.page == "Admin" and st.session_state.logged_in and st.session_state.user_role == 'admin':
     at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 แชทลูกค้า"])
-    
     with at1:
         df_b = get_data("Bookings")
         if not df_b.empty:
             df_b['price'] = pd.to_numeric(df_b['price'], errors='coerce').fillna(0)
             st.metric("รายได้รวมทั้งหมด", f"{df_b[df_b['status']=='เสร็จสิ้น']['price'].sum():,.0f} บ.")
             st.dataframe(df_b[df_b['status']=='เสร็จสิ้น'][['date', 'fullname', 'service', 'price']])
-    
     with at2:
         st.subheader("📅 รายการคิวลูกค้าทั้งหมด")
         df_admin = get_data("Bookings")
@@ -202,7 +210,6 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in and st.sess
                             df_admin = df_admin[df_admin['id'] != row['id']]
                             conn.update(worksheet="Bookings", data=df_admin); st.rerun()
         else: st.warning("ไม่พบข้อมูลการจอง")
-
     with at3:
         df_msg_admin = get_data("Messages")
         if not df_msg_admin.empty:
@@ -217,7 +224,6 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in and st.sess
                         if st.form_submit_button("ส่งคำตอบ"):
                             df_msg_admin.at[idx, 'admin_reply'] = ans
                             conn.update(worksheet="Messages", data=df_msg_admin); st.rerun()
-        else: st.info("ยังไม่มีข้อความจากลูกค้า")
 
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิววันนี้")
