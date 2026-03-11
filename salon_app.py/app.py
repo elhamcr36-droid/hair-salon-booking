@@ -6,7 +6,7 @@ import uuid
 import streamlit.components.v1 as components
 
 # --- 1. CONFIG & STYLING ---
-st.set_page_config(page_title="222-Salon-Final", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="222-Salon-Booking", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -19,13 +19,17 @@ st.markdown("""
             box-shadow: 2px 4px 12px rgba(0,0,0,0.08); color: #000000 !important;
         }
         .price-text { float: right; color: #FF4B4B; font-weight: bold; }
-        .nav-button { background-color: #FF4B4B; color: white; padding: 15px; border-radius: 12px; 
-                      text-align: center; font-weight: bold; font-size: 16px; 
-                      box-shadow: 2px 4px 10px rgba(0,0,0,0.2); transition: 0.3s; }
-        .nav-button:hover { background-color: #d43f3f; }
+        .nav-button {
+            display: block; background-color: #FF4B4B; color: white !important; 
+            padding: 15px; border-radius: 12px; text-align: center; 
+            font-weight: bold; font-size: 16px; text-decoration: none;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.2); transition: 0.3s;
+        }
+        .nav-button:hover { background-color: #d43f3f; transform: scale(1.02); }
     </style>
 """, unsafe_allow_html=True)
 
+# --- 2. DATABASE CONNECTION ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data(sheet_name):
@@ -36,12 +40,10 @@ def get_data(sheet_name):
         df.columns = [str(c).strip().lower() for c in df.columns]
         for col in df.columns:
             df[col] = df[col].astype(str).str.strip().replace(r'\.0$', '', regex=True).replace('nan', '')
-            if 'phone' in col or 'username' in col:
-                df[col] = df[col].apply(lambda x: '0' + x if len(x) == 9 and x.isdigit() else x)
         return df
     except: return pd.DataFrame()
 
-# --- 2. SESSION & NAVIGATION ---
+# --- 3. SESSION & NAVIGATION ---
 if 'page' not in st.session_state: st.session_state.page = "Home"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
@@ -50,6 +52,8 @@ def navigate(p):
     st.rerun()
 
 st.markdown("<h1 class='main-header'>✂️ 222-Salon</h1>", unsafe_allow_html=True)
+
+# แถบเมนู
 m_cols = st.columns(5)
 with m_cols[0]:
     if st.button("🏠 หน้าแรก"): navigate("Home")
@@ -72,8 +76,9 @@ else:
             navigate("Home")
 st.divider()
 
-# --- 3. PAGE LOGIC ---
+# --- 4. PAGE LOGIC ---
 
+# --- PAGE: HOME ---
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (⚠️ หยุดทุกวันเสาร์)")
@@ -96,24 +101,22 @@ if st.session_state.page == "Home":
     
     with c2:
         st.subheader("📍 พิกัดร้าน")
-        # ลิงก์ตรงปักหมุดที่ 222 ถนนเทศบาล 1 (7.1915128, 100.5983227)
-        maps_link = "https://www.google.com/maps?q=7.1915128,100.5983227"
+        # ลิงก์ตรงปักหมุดพิกัด 7.1915128, 100.5983227 (222 ถนนเทศบาล 1)
+        # ใช้พิกัดจริงเพื่อให้ปักหมุดตรงเป๊ะตามรูปที่ลูกค้าต้องการ
+        maps_link = "https://www.google.com/maps/place/7.1915128,100.5983227"
         
-        # แสดงรูปภาพแทนแผนที่
         st.image("https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=400")
         
-        # ปุ่มกดเพื่อเด้งเปิด Google Maps
         st.markdown(f'''
-            <a href="{maps_link}" target="_blank" style="text-decoration: none;">
-                <div class="nav-button">
-                    🚩 กดที่นี่เพื่อเปิด Google Maps (นำทาง)
-                </div>
+            <a href="{maps_link}" target="_blank" class="nav-button">
+                🚩 กดเพื่อเปิด Google Maps (นำทาง)
             </a>
-            <p style="text-align: center; font-size: 13px; color: gray; margin-top: 8px;">
-                🏠 222 ถนนเทศบาล 1 ต.บ่อยาง อ.เมืองสงขลา
+            <p style="text-align: center; font-size: 13px; color: gray; margin-top: 10px;">
+                222 ถนนเทศบาล 1 ต.บ่อยาง อ.เมืองสงขลา จ.สงขลา
             </p>
         ''', unsafe_allow_html=True)
 
+# --- PAGE: REGISTER ---
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
     with st.form("reg_form"):
@@ -131,6 +134,7 @@ elif st.session_state.page == "Register":
                     st.success("✅ สำเร็จ!"); navigate("Login")
             else: st.error("❌ ข้อมูลไม่ถูกต้อง")
 
+# --- PAGE: LOGIN ---
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
     u_in = st.text_input("เบอร์โทรศัพท์").strip()
@@ -147,8 +151,9 @@ elif st.session_state.page == "Login":
                 navigate("Booking")
             else: st.error("❌ ข้อมูลไม่ถูกต้อง")
 
+# --- PAGE: BOOKING ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
-    t1, t2 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิว"])
+    t1, t2 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิวของคุณ"])
     with t1:
         with st.form("b_form"):
             b_d = st.date_input("เลือกวันที่", min_value=datetime.now().date())
@@ -168,16 +173,20 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
             my_qs = df_history[df_history['username'] == st.session_state.username]
             st.dataframe(my_qs)
 
+# --- PAGE: ADMIN ---
 elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
-    st.subheader("📊 จัดการร้าน")
+    st.subheader("📊 จัดการร้าน (Admin)")
     df_admin = get_data("Bookings")
     if not df_admin.empty:
         st.dataframe(df_admin)
 
+# --- PAGE: VIEW QUEUES (TODAY) ---
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิววันนี้")
     df_today = get_data("Bookings")
     today_str = datetime.now().strftime("%Y-%m-%d")
     if not df_today.empty:
         active = df_today[(df_today['date'] == today_str) & (df_today['status'] == "รอรับบริการ")]
-        st.table(active[['time', 'service', 'fullname']].sort_values('time'))
+        if not active.empty:
+            st.table(active[['time', 'service', 'fullname']].sort_values('time'))
+        else: st.info("วันนี้ยังไม่มีการจองคิว")
