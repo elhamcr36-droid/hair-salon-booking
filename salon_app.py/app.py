@@ -5,7 +5,7 @@ from datetime import datetime
 import uuid
 
 # --- 1. CONFIG & STYLING ---
-st.set_page_config(page_title="222-Salon-Final", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="222-Salon-Full-System", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -17,7 +17,6 @@ st.markdown("""
             border-left: 6px solid #FF4B4B; margin-bottom: 12px;
             box-shadow: 2px 4px 12px rgba(0,0,0,0.08); color: #000000 !important;
         }
-        .price-text { float: right; color: #FF4B4B; font-weight: bold; }
         .nav-button {
             display: block; background-color: #FF4B4B; color: white !important; 
             padding: 15px; border-radius: 12px; text-align: center; 
@@ -50,7 +49,7 @@ def navigate(p):
 
 st.markdown("<h1 class='main-header'>✂️ 222-Salon</h1>", unsafe_allow_html=True)
 
-# แถบเมนูหลัก (Navigation Bar)
+# แถบเมนูหลัก
 m_cols = st.columns(5)
 with m_cols[0]:
     if st.button("🏠 หน้าแรก"): navigate("Home")
@@ -81,49 +80,64 @@ if st.session_state.page == "Home":
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (⚠️ หยุดทุกวันเสาร์)")
     
     st.subheader("📋 บริการและราคา")
-    services = {"✂️ ตัดผมชาย": "150-350 บ.", "💇‍♀️ ตัดผมหญิง": "350-800 บ.", "🚿 สระ-ไดร์": "200-450 บ.", "🎨 ทำสีผม": "1,500 บ.+", "✨ ยืด/ดัด": "1,000 บ.+", "🌿 ทรีทเม้นท์": "500 บ.+"}
+    services = {"✂️ ตัดผมชาย": "150-350 บ.", "💇‍♀️ ตัดผมหญิง": "350-800 บ.", "🚿 สระ-ไดร์": "200-450 บ.", "🎨 ทำสีผม": "1,500 บ.+", "✨ ยืด/ดัด": "1,000 บ.+", "🌿 ทรีทเม้นท์": "500 บ.+" }
     p1, p2 = st.columns(2)
     for i, (name, price) in enumerate(services.items()):
         target = p1 if i % 2 == 0 else p2
-        target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
+        target.markdown(f'<div class="price-card"><b>{name}</b><span style="float:right; color:#FF4B4B;">{price}</span></div>', unsafe_allow_html=True)
 
     st.divider()
     c1, c2 = st.columns([1, 1])
-    
     with c1:
         st.subheader("📞 ติดต่อเรา")
         st.write("📱 **เบอร์โทร:** 081-222-2222")
         st.write("💬 **LINE ID:** @222salon")
-        st.write("🔵 **Facebook:** 222 Salon")
-    
     with c2:
         st.subheader("📍 พิกัดร้าน")
-        # ลิงก์พิกัด 222 ถนนเทศบาล 1 ตามรูปภาพ
-        maps_link = "https://www.google.com/maps/place/222+Tesaban+1+Alley,+Tambon+Bo+Yang,+Amphoe+Mueang+Songkhla,+Chang+Wat+Songkhla+90000"
-        
-        st.markdown(f'''
-            <a href="{maps_link}" target="_blank" class="nav-button">
-                🚩 กดเพื่อเปิด Google Maps <br>
-                (ตำแหน่ง 222 ถนนเทศบาล 1)
-            </a>
-            <p style="text-align: center; font-size: 13px; color: gray; margin-top: 10px;">
-                🏠 เลขที่ 222 ถนนเทศบาล 1 ต.บ่อยาง อ.เมืองสงขลา
-            </p>
-        ''', unsafe_allow_html=True)
+        # ลิงก์พิกัดจากรูปภาพ Google Maps (222 ถ.เทศบาล 1)
+        maps_link = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.055624177263!2d100.596041!3d7.1915128!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x304d334d77f40429%3A0x7d80000000000000!2s222%20Tesaban%201%20Alley%2C%20Bo%20Yang%2C%20Mueang%20Songkhla%20District%2C%20Songkhla%2090000!5e0!3m2!1sth!2sth!4v1710170000000!5m2!1sth!2sth2"
+        st.markdown(f'''<a href="{maps_link}" target="_blank" class="nav-button">🚩 เปิดแผนที่ร้าน (222 ถ.เทศบาล 1)</a>''', unsafe_allow_html=True)
 
 # --- หน้าจัดการร้าน (Admin) ---
 elif st.session_state.page == "Admin" and st.session_state.user_role == 'admin':
-    st.subheader("📊 จัดการร้าน (Admin)") #
-    df_admin = get_data("Bookings")
-    if not df_admin.empty:
-        # แสดงผลตารางตามคอลัมน์ในรูปภาพ: id, username, fullname, date, time, service, status, price
+    st.subheader("📊 จัดการร้าน (Admin)")
+    df_bookings = get_data("Bookings")
+    
+    if not df_bookings.empty:
+        # ส่วนสำหรับการอัปเดตราคาและสถานะ
+        with st.expander("✅ ยืนยันคิวและระบุราคา", expanded=True):
+            edit_col1, edit_col2, edit_col3 = st.columns(3)
+            with edit_col1:
+                selected_id = st.selectbox("เลือก ID คิวที่จะจัดการ", df_bookings['id'].tolist())
+            with edit_col2:
+                input_price = st.text_input("ระบุราคาค่าบริการ (บาท)", "0")
+            with edit_col3:
+                input_status = st.selectbox("เปลี่ยนสถานะ", ["รอรับบริการ", "กำลังบริการ", "เสร็จสิ้น", "ยกเลิก"])
+            
+            if st.button("💾 บันทึกข้อมูล"):
+                df_bookings.loc[df_bookings['id'] == selected_id, 'price'] = input_price
+                df_bookings.loc[df_bookings['id'] == selected_id, 'status'] = input_status
+                conn.update(worksheet="Bookings", data=df_bookings)
+                st.success(f"อัปเดตคิว {selected_id} สำเร็จ!")
+                st.rerun()
+
+        st.divider()
+        # ตารางแสดงผลพร้อมลิงก์แชทลูกค้า
+        st.write("### 📝 รายการจองทั้งหมด")
+        admin_df = df_bookings.copy()
+        # สร้างลิงก์สำหรับทักแชทลูกค้า (ตัวอย่างใช้เบอร์โทรเป็น ID LINE)
+        admin_df['chat'] = "https://line.me/ti/p/~" + admin_df['username'].astype(str)
+        
         st.dataframe(
-            df_admin[['id', 'username', 'fullname', 'date', 'time', 'service', 'status', 'price']], 
+            admin_df[['id', 'username', 'fullname', 'date', 'time', 'service', 'status', 'price', 'chat']],
+            column_config={
+                "chat": st.column_config.LinkColumn("💬 แชทกับลูกค้า")
+            },
             use_container_width=True,
             hide_index=True
         )
     else:
-        st.info("ยังไม่มีข้อมูลการจองในระบบ")
+        st.info("ยังไม่มีข้อมูลการจอง")
 
 # --- หน้าเข้าสู่ระบบ (Login) ---
 elif st.session_state.page == "Login":
@@ -140,22 +154,18 @@ elif st.session_state.page == "Login":
             if not user.empty:
                 st.session_state.update({'logged_in': True, 'user_role': 'user', 'username': u_in, 'fullname': user.iloc[0]['fullname']})
                 navigate("Booking")
-            else: st.error("❌ ข้อมูลไม่ถูกต้อง")
+            else: st.error("ข้อมูลไม่ถูกต้อง")
 
 # --- หน้าสมัครสมาชิก (Register) ---
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
     with st.form("reg_form"):
-        nf = st.text_input("ชื่อ-นามสกุล")
-        nu = st.text_input("เบอร์โทรศัพท์")
-        np = st.text_input("รหัสผ่าน", type="password")
-        npc = st.text_input("ยืนยันรหัสผ่าน", type="password")
+        nf, nu, np = st.text_input("ชื่อ-นามสกุล"), st.text_input("เบอร์โทร"), st.text_input("รหัสผ่าน", type="password")
         if st.form_submit_button("ลงทะเบียน"):
-            if nu and np == npc and nf:
-                df_u = get_data("Users")
-                new_u = pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])
-                conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
-                st.success("✅ สมัครสำเร็จ!"); navigate("Login")
+            df_u = get_data("Users")
+            new_u = pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])
+            conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
+            st.success("ลงทะเบียนสำเร็จ!"); navigate("Login")
 
 # --- หน้าจองคิว (Booking) ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
@@ -164,11 +174,11 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
         b_d = st.date_input("เลือกวันที่", min_value=datetime.now().date())
         b_t = st.selectbox("เวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
         b_s = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
-        if st.form_submit_button("ยืนยัน"):
+        if st.form_submit_button("ยืนยันการจอง"):
             df_all = get_data("Bookings")
             new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
             conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
-            st.success("✅ จองสำเร็จ!")
+            st.success("จองสำเร็จ!"); navigate("Home")
 
 # --- หน้าดูคิววันนี้ (ViewQueues) ---
 elif st.session_state.page == "ViewQueues":
@@ -178,3 +188,4 @@ elif st.session_state.page == "ViewQueues":
     if not df_today.empty:
         active = df_today[df_today['date'] == t_str]
         st.table(active[['time', 'service', 'fullname']].sort_values('time'))
+    else: st.info("ไม่มีคิวในวันนี้")
