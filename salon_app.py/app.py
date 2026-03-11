@@ -252,3 +252,4 @@ elif st.session_state.page == "ViewQueues":
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
         else: st.info(f"ไม่มีการจองในวันนี้ ({today_str})")
 
+
