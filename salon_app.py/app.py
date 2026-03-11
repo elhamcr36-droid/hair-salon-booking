@@ -21,7 +21,7 @@ st.markdown("""
         .price-text { color: #FF4B4B !important; font-weight: bold;}
         .summary-box {
             text-align: center; background: #FF4B4B; color: white; padding: 15px;
-            border-radius: 10px; margin-bottom: 20px;
+            border-radius: 10px; margin-bottom: 20px; box-shadow: 2px 4px 8px rgba(0,0,0,0.1);
         }
     </style>
 """, unsafe_allow_html=True)
@@ -87,18 +87,30 @@ if st.session_state.page == "Home":
         target = p1 if i % 2 == 0 else p2
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
 
-# --- หน้า Register ---
+# --- หน้า Register (สมัครสมาชิก) ---
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิกใหม่")
-    with st.form("reg"):
-        nu, nf = st.text_input("เบอร์โทรศัพท์"), st.text_input("ชื่อ-นามสกุล")
-        np, np_c = st.text_input("รหัสผ่าน", type="password"), st.text_input("ยืนยันรหัสผ่าน", type="password")
+    with st.form("reg_form"):
+        nu = st.text_input("เบอร์โทรศัพท์ (ใช้เข้าสู่ระบบ)").strip()
+        nf = st.text_input("ชื่อ-นามสกุล").strip()
+        np = st.text_input("รหัสผ่าน", type="password").strip()
+        np_confirm = st.text_input("ยืนยันรหัสผ่าน", type="password").strip()
+        
         if st.form_submit_button("ลงทะเบียน"):
-            if np != np_c: st.error("❌ รหัสผ่านไม่ตรงกัน")
+            if not nu or not nf or not np:
+                st.error("⚠️ กรุณากรอกข้อมูลให้ครบถ้วน")
+            elif np != np_confirm:
+                st.error("❌ รหัสผ่านไม่ตรงกัน")
             else:
                 df_u = get_data("Users")
-                conn.update(worksheet="Users", data=pd.concat([df_u, pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])], ignore_index=True))
-                st.success("สมัครสำเร็จ!"); time.sleep(1); navigate("Login")
+                if not df_u.empty and nu in df_u['phone'].values:
+                    st.error("⚠️ เบอร์โทรนี้เคยลงทะเบียนไว้แล้ว")
+                else:
+                    new_user = pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])
+                    conn.update(worksheet="Users", data=pd.concat([df_u, new_user], ignore_index=True))
+                    st.success("✅ สมัครสมาชิกสำเร็จ!")
+                    time.sleep(1.5)
+                    navigate("Login")
 
 # --- หน้า Login ---
 elif st.session_state.page == "Login":
@@ -119,64 +131,75 @@ elif st.session_state.page == "Login":
 
 # --- หน้าจองคิว (ลูกค้า) ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
-    t1, t2 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิว"])
+    t1, t2 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิวของคุณ"])
     with t1:
         with st.form("booking_form"):
             b_date = st.date_input("เลือกวันที่")
             b_time = st.selectbox("เวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
             b_service = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
-            if st.form_submit_button("ยืนยัน"):
+            if st.form_submit_button("ยืนยันการจอง"):
                 df_b = get_data("Bookings")
                 new_q = pd.DataFrame([{"id": str(int(datetime.now().timestamp())), "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_date), "time": b_time, "service": b_service, "status": "รอรับบริการ", "price": "0"}])
                 conn.update(worksheet="Bookings", data=pd.concat([df_b, new_q], ignore_index=True))
-                st.success("✅ จองสำเร็จ"); st.rerun()
+                st.success("✅ จองสำเร็จแล้ว!"); st.rerun()
+    with t2:
+        df_b = get_data("Bookings")
+        if not df_b.empty:
+            my_qs = df_b[df_b['username'] == st.session_state.username]
+            if my_qs.empty: st.write("ไม่มีข้อมูลการจอง")
+            for _, row in my_qs.iterrows():
+                with st.container(border=True):
+                    st.write(f"**{row['service']}** | 📅 {row['date']} ⏰ {row['time']}")
+                    st.write(f"สถานะ: `{row['status']}`" + (f" | ราคา: {row['price']} บาท" if row['status'] == "รับบริการเสร็จสิ้น" else ""))
+                    if row['status'] == "รอรับบริการ" and st.button("❌ ยกเลิกคิว", key=f"u_del_{row['id']}"):
+                        conn.update(worksheet="Bookings", data=df_b[df_b['id'] != row['id']]); st.rerun()
 
-# --- หน้า Admin (จัดการร้าน & ยอดเงิน) ---
+# --- หน้า Admin (จัดการยอดเงินและคิว) ---
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
     df_b = get_data("Bookings")
     today_str = datetime.now().strftime("%Y-%m-%d")
     
-    # คำนวณยอดวันนี้
+    # คำนวณยอดสรุปวันนี้
     if not df_b.empty:
         today_data = df_b[df_b['date'] == today_str]
-        done_today = today_data[today_data['status'] == "รับบริการเสร็จสิ้น"]
-        daily_income = pd.to_numeric(done_today['price'], errors='coerce').sum()
-        queue_count = len(today_data[today_data['status'] == "รอรับบริการ"])
+        income = pd.to_numeric(today_data[today_data['status'] == "รับบริการเสร็จสิ้น"]['price'], errors='coerce').sum()
+        wait_q = len(today_data[today_data['status'] == "รอรับบริการ"])
     else:
-        daily_income, queue_count = 0, 0
+        income, wait_q = 0, 0
 
-    # แสดงยอด Dashboard
-    c1, c2 = st.columns(2)
-    with c1: st.markdown(f"<div class='summary-box'><h3>📅 คิวรอวันนี้</h3><h2>{queue_count} คิว</h2></div>", unsafe_allow_html=True)
-    with c2: st.markdown(f"<div class='summary-box' style='background:#28a745;'><h3>💰 ยอดเงินวันนี้</h3><h2>{daily_income:,.2f} บ.</h2></div>", unsafe_allow_html=True)
+    # แดชบอร์ดสรุปผล
+    sum1, sum2 = st.columns(2)
+    sum1.markdown(f"<div class='summary-box'><h3>📅 คิวรอวันนี้</h3><h2>{wait_q} คิว</h2></div>", unsafe_allow_html=True)
+    sum2.markdown(f"<div class='summary-box' style='background:#28a745;'><h3>💰 ยอดเงินวันนี้</h3><h2>{income:,.2f} บาท</h2></div>", unsafe_allow_html=True)
 
-    st.subheader("📋 จัดการคิวลูกค้า")
+    st.subheader("📋 รายการลูกค้าวันนี้")
     if not df_b.empty:
-        # แสดงเฉพาะคิวที่ยังไม่เสร็จหรือยกเลิก
-        pending_qs = df_b[df_b['status'] == "รอรับบริการ"]
+        pending_qs = df_b[(df_b['status'] == "รอรับบริการ") & (df_b['date'] == today_str)]
+        if pending_qs.empty:
+            st.info("ไม่มีคิวค้างในขณะนี้")
         for _, row in pending_qs.iterrows():
             with st.container(border=True):
-                col_info, col_action = st.columns([2, 1])
-                with col_info:
-                    st.write(f"👤 **{row['fullname']}** ({row['service']})")
-                    st.write(f"⏰ {row['time']} | {row['date']}")
-                with col_action:
-                    # ช่องกรอกราคาจริง
-                    final_price = st.number_input(f"ระบุราคา (บาท)", min_value=0, value=0, key=f"p_{row['id']}")
-                    if st.button(f"✅ บันทึก & เสร็จสิ้น", key=f"btn_{row['id']}"):
-                        df_b.loc[df_b['id'] == row['id'], 'status'] = "รับบริการเสร็จสิ้น"
-                        df_b.loc[df_b['id'] == row['id'], 'price'] = str(final_price)
-                        conn.update(worksheet="Bookings", data=df_b)
-                        st.success(f"บันทึกรายได้ {final_price} บาท เรียบร้อย!")
-                        time.sleep(1); st.rerun()
+                c_info, c_price, c_btn = st.columns([2, 1, 1])
+                c_info.write(f"👤 **{row['fullname']}** ({row['service']}) ⏰ {row['time']}")
+                
+                # ช่องกรอกราคา (Admin สามารถแก้ไขได้)
+                new_p = c_price.number_input("ราคาเรียกเก็บจริง", min_value=0, value=0, key=f"inp_{row['id']}")
+                
+                if c_btn.button("✅ จบงาน", key=f"fin_{row['id']}"):
+                    df_b.loc[df_b['id'] == row['id'], 'status'] = "รับบริการเสร็จสิ้น"
+                    df_b.loc[df_b['id'] == row['id'], 'price'] = str(new_p)
+                    conn.update(worksheet="Bookings", data=df_b)
+                    st.success(f"บันทึกยอดเงิน {new_p} บาทสำเร็จ")
+                    time.sleep(0.5); st.rerun()
 
-# --- หน้า ViewQueues (คิววันนี้) ---
+# --- หน้า ViewQueues (คิววันนี้สำหรับทุกคน) ---
 elif st.session_state.page == "ViewQueues":
-    st.subheader("📅 คิววันนี้")
+    st.subheader("📅 ตารางคิววันนี้")
     df_b = get_data("Bookings")
+    today_str = datetime.now().strftime("%Y-%m-%d")
     if not df_b.empty:
-        today_str = datetime.now().strftime("%Y-%m-%d")
         active = df_b[(df_b['date'] == today_str) & (df_b['status'] == "รอรับบริการ")]
         if not active.empty:
-            st.table(active[['time', 'service', 'fullname']])
-        else: st.info("ไม่มีคิวรอ")
+            st.table(active[['time', 'service', 'fullname']].sort_values('time'))
+        else: st.write("ไม่มีคิวจองในวันนี้")
+    else: st.write("ยังไม่มีข้อมูลการจอง")
