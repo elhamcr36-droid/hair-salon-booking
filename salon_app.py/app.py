@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 import time
 
-# --- 1. CONFIG & STYLING ---
+# --- 1. การตั้งค่าหน้าตาเว็บ (UI) ---
 st.set_page_config(page_title="222-Salon", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
@@ -33,12 +33,18 @@ st.markdown("""
             background-color: #ffffff !important; padding: 15px; border-radius: 12px;
             border-left: 5px solid #FF4B4B; margin-bottom: 10px; box-shadow: 2px 2px 8px rgba(0,0,0,0.05);
         }
+        .summary-box {
+            text-align: center; background: #FF4B4B; color: white; padding: 15px;
+            border-radius: 10px; margin-bottom: 20px;
+        }
     </style>
 """, unsafe_allow_html=True)
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- ฟังก์ชันดึงข้อมูลแบบแยกส่วน ---
+# --- 2. ฟังก์ชันจัดการข้อมูล (แก้ Error 429 & แชทขาว) ---
+
+# สำหรับข้อมูลทั่วไป (ใช้ Cache 30 วิ เพื่อลดภาระ API)
 @st.cache_data(ttl=30)
 def get_data(sheet_name):
     try:
@@ -51,19 +57,18 @@ def get_data(sheet_name):
     except:
         return pd.DataFrame()
 
-# ฟังก์ชันดึงแชทแบบ Force Refresh (ห้ามใช้ Cache)
+# สำหรับแชท (Force Refresh: บังคับโหลดใหม่ตลอดเวลา)
 def get_chat_now():
     try:
-        # บังคับดึงใหม่ทุกครั้ง (ttl=0)
+        # บังคับดึงข้อมูลใหม่ (ttl=0) เพื่อแก้ปัญหาหน้าขาว
         df = conn.read(worksheet="Chats", ttl=0)
         df = df.dropna(how='all')
         df.columns = [str(c).strip().lower() for c in df.columns]
         return df
     except:
-        # ถ้าพังให้คืนค่าโครงสร้างว่าง
         return pd.DataFrame(columns=['username', 'fullname', 'message', 'time'])
 
-# --- 2. NAVIGATION ---
+# --- 3. ระบบจัดการหน้าเว็บ ---
 if 'page' not in st.session_state: st.session_state.page = "Home"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
@@ -90,39 +95,52 @@ else:
         lbl = "📊 จัดการร้าน" if role == 'admin' else "✂️ จอง/แชท"
         if st.button(lbl): navigate("Admin" if role == 'admin' else "Booking")
     with m_cols[4]:
-        if st.button("🚪 ออก"):
+        if st.button("🚪 ออกจากระบบ"):
             st.session_state.clear()
             st.cache_data.clear()
             navigate("Home")
 
 st.divider()
 
-# --- 3. PAGE LOGIC ---
+# --- 4. เนื้อหาแต่ละหน้า ---
 
-# หน้าแรก
+# --- หน้าแรก ---
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ 09:30 - 19:30 น. | 📍 222 ซอย.พิรม สงขลา.")
-    st.link_button("📍 แผนที่ Google Maps (GPS)", "http://maps.google.com", type="primary", use_container_width=True)
+    
+    # บริการและราคา
+    st.subheader("📋 ราคาค่าบริการ")
+    services = {"✂️ ตัดผมชาย": "150 บ.", "💇‍♀️ ตัดผมหญิง": "350 บ.", "🚿 สระ-ไดร์": "200 บ.", "🎨 ทำสีผม": "1,500 บ.+"}
+    p1, p2 = st.columns(2)
+    for i, (name, price) in enumerate(services.items()):
+        target = p1 if i % 2 == 0 else p2
+        target.markdown(f'<div class="price-card"><b>{name}</b><br><span style="color:#FF4B4B;">{price}</span></div>', unsafe_allow_html=True)
+    
+    # ปุ่ม GPS (ตามคำสั่ง)
+    st.link_button("📍 นำทางด้วย Google Maps (GPS)", "https://maps.google.com", type="primary", use_container_width=True)
 
-# สมัครสมาชิก
+# --- สมัครสมาชิก ---
 elif st.session_state.page == "Register":
-    st.subheader("📝 สมัครสมาชิก")
+    st.subheader("📝 สมัครสมาชิกใหม่")
     with st.form("reg"):
-        u, f, p = st.text_input("เบอร์โทร"), st.text_input("ชื่อ-นามสกุล"), st.text_input("รหัส", type="password")
-        if st.form_submit_button("ตกลง"):
-            df_u = get_data("Users")
-            new_u = pd.DataFrame([{"phone":u, "password":p, "fullname":f, "role":"user"}]).astype(str)
-            conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
-            st.cache_data.clear()
-            navigate("Login")
+        u = st.text_input("เบอร์โทรศัพท์ (สิบลัก)")
+        f = st.text_input("ชื่อ-นามสกุล")
+        p = st.text_input("รหัสผ่าน", type="password")
+        if st.form_submit_button("ยืนยันการสมัคร"):
+            if u and f and p:
+                df_u = get_data("Users")
+                new_u = pd.DataFrame([{"phone":u, "password":p, "fullname":f, "role":"user"}]).astype(str)
+                conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
+                st.cache_data.clear()
+                st.success("ลงทะเบียนสำเร็จ!"); navigate("Login")
 
-# เข้าสู่ระบบ
+# --- เข้าสู่ระบบ ---
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
-    u_in = st.text_input("เบอร์โทร")
+    u_in = st.text_input("เบอร์โทรศัพท์")
     p_in = st.text_input("รหัสผ่าน", type="password")
-    if st.button("ตกลง"):
+    if st.button("เข้าสู่ระบบ"):
         if u_in == "admin222" and p_in == "222":
             st.session_state.update({'logged_in': True, 'user_role': 'admin', 'username': 'admin', 'fullname': 'แอดมิน'})
             navigate("Admin")
@@ -132,52 +150,46 @@ elif st.session_state.page == "Login":
             if not user.empty:
                 st.session_state.update({'logged_in': True, 'user_role': 'user', 'username': u_in, 'fullname': user.iloc[0]['fullname']})
                 navigate("Booking")
-            else: st.error("ข้อมูลผิด")
+            else: st.error("ข้อมูลไม่ถูกต้อง")
 
-# หน้าจองคิว + แชท (จุดที่มีปัญหา)
+# --- หน้าจองคิว + แชท (จุดที่รวมคำสั่งแก้แชทขาว) ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
-    t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติ", "💬 แชทกับร้าน"])
+    t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิว", "💬 แชทกับร้าน"])
     
     with t1:
-        with st.form("book"):
+        with st.form("booking"):
             d = st.date_input("เลือกวันที่")
             tm = st.selectbox("เวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
-            s = st.selectbox("บริการ", ["ตัดผม", "สระ-ไดร์", "ทำสี"])
-            if st.form_submit_button("ยืนยัน"):
+            s = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสี"])
+            if st.form_submit_button("ยืนยันการจอง"):
                 df_b = get_data("Bookings")
                 new_q = pd.DataFrame([{"id":str(int(time.time())), "username":st.session_state.username, "fullname":st.session_state.fullname, "date":str(d), "time":tm, "service":s, "status":"รอรับบริการ", "price":"0"}]).astype(str)
                 conn.update(worksheet="Bookings", data=pd.concat([df_b, new_q], ignore_index=True))
                 st.cache_data.clear()
-                st.success("จองแล้ว!")
+                st.success("จองสำเร็จ!")
 
     with t2:
         df_b = get_data("Bookings")
         st.dataframe(df_b[df_b['username'] == st.session_state.username], use_container_width=True)
 
     with t3:
-        st.subheader("💬 ห้องสนทนา")
-        # --- ดึงแชทแบบ Real-time ---
-        df_c = get_chat_now()
+        st.subheader("💬 สนทนากับแอดมิน")
+        df_c = get_chat_now() # เรียกใช้ฟังก์ชันดึงแชทแบบ Real-time
         
+        # แสดงผลแชท
         st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
-        if not df_c.empty and 'message' in df_c.columns:
+        if not df_c.empty:
             for _, msg in df_c.iterrows():
                 is_me = str(msg['username']) == str(st.session_state.username)
                 cls = "my-msg" if is_me else "other-msg"
-                st.markdown(f"""
-                    <div class='{cls}'>
-                        <span class='msg-info'>{msg['fullname']}</span>
-                        {msg['message']}<br>
-                        <span class='msg-time'>{msg['time']}</span>
-                    </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"<div class='{cls}'><span class='msg-info'>{msg['fullname']}</span>{msg['message']}<br><span class='msg-time'>{msg['time']}</span></div>", unsafe_allow_html=True)
         else:
-            st.info("ยังไม่มีข้อความ หรือหัวตารางไม่ถูกต้อง (username, fullname, message, time)")
+            st.write("ยังไม่มีข้อความคุยกันเลย...")
         st.markdown("</div>", unsafe_allow_html=True)
         
-        with st.form("send_chat_form", clear_on_submit=True):
-            m_text = st.text_input("พิมพ์ข้อความที่นี่...")
-            if st.form_submit_button("ส่งข้อความ"):
+        with st.form("chat_form", clear_on_submit=True):
+            m_text = st.text_input("พิมพ์ข้อความ...")
+            if st.form_submit_button("ส่ง"):
                 if m_text:
                     new_m = pd.DataFrame([{
                         "username": str(st.session_state.username),
@@ -185,31 +197,42 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
                         "message": str(m_text),
                         "time": datetime.now().strftime("%H:%M")
                     }]).astype(str)
-                    # อัปเดตข้อมูลแชท
                     conn.update(worksheet="Chats", data=pd.concat([df_c, new_m], ignore_index=True))
-                    st.rerun()
+                    st.rerun() # บังคับรีเฟรชหน้าจอทันที
 
-# หน้า Admin
+# --- หน้า Admin (จัดการยอดเงินและแชท) ---
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
-    a1, a2 = st.tabs(["📊 จัดการคิว", "💬 แชทลูกค้า"])
+    a1, a2 = st.tabs(["📊 คิววันนี้/ยอดเงิน", "💬 ตอบแชทลูกค้า"])
+    
     with a1:
-        st.dataframe(get_data("Bookings"))
+        df_b = get_data("Bookings")
+        t_str = datetime.now().strftime("%Y-%m-%d")
+        today = df_b[df_b['date'] == t_str]
+        income = pd.to_numeric(today[today['status'] == "รับบริการเสร็จสิ้น"]['price'], errors='coerce').sum()
+        
+        col1, col2 = st.columns(2)
+        col1.markdown(f"<div class='summary-box'><h3>คิววันนี้</h3><h2>{len(today)}</h2></div>", unsafe_allow_html=True)
+        col2.markdown(f"<div class='summary-box' style='background:#28a745;'><h3>ยอดเงิน</h3><h2>{income:,.0f} บ.</h2></div>", unsafe_allow_html=True)
+        st.dataframe(df_b)
+
     with a2:
         df_c = get_chat_now()
         st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
         if not df_c.empty:
             for _, msg in df_c.iterrows():
-                is_me = msg['username'] == 'admin'
-                cls = "my-msg" if is_me else "other-msg"
+                is_adm = msg['username'] == 'admin'
+                cls = "my-msg" if is_adm else "other-msg"
                 st.markdown(f"<div class='{cls}'><span class='msg-info'>{msg['fullname']}</span>{msg['message']}<br><span class='msg-time'>{msg['time']}</span></div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
-        with st.form("admin_send", clear_on_submit=True):
-            atxt = st.text_input("ตอบกลับ...")
-            if st.form_submit_button("ส่ง"):
-                new_am = pd.DataFrame([{"username":"admin", "fullname":"แอดมิน", "message":atxt, "time":datetime.now().strftime("%H:%M")}]).astype(str)
+        with st.form("admin_chat", clear_on_submit=True):
+            atxt = st.text_input("พิมพ์ตอบกลับลูกค้า...")
+            if st.form_submit_button("ส่งในนามร้าน"):
+                new_am = pd.DataFrame([{"username":"admin", "fullname":"แอดมิน (ร้าน)", "message":atxt, "time":datetime.now().strftime("%H:%M")}]).astype(str)
                 conn.update(worksheet="Chats", data=pd.concat([df_c, new_am], ignore_index=True))
                 st.rerun()
 
+# --- คิววันนี้ (บุคคลทั่วไป) ---
 elif st.session_state.page == "ViewQueues":
-    st.subheader("📅 คิววันนี้")
-    st.table(get_data("Bookings"))
+    st.subheader("📅 คิวรับบริการวันนี้")
+    df_b = get_data("Bookings")
+    st.table(df_b[df_b['date'] == datetime.now().strftime("%Y-%m-%d")])
