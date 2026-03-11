@@ -26,7 +26,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# เชื่อมต่อ Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data(sheet_name):
@@ -52,7 +51,7 @@ def navigate(p):
 
 st.markdown("<h1 class='main-header'>✂️ 222-Salon</h1>", unsafe_allow_html=True)
 
-# แถบเมนูหลัก
+# เมนูหลัก
 m_cols = st.columns(5)
 with m_cols[0]:
     if st.button("🏠 หน้าแรก"): navigate("Home")
@@ -108,7 +107,7 @@ elif st.session_state.page == "Login":
         if not user.empty:
             st.session_state.update({'logged_in': True, 'user_role': user.iloc[0]['role'], 'username': u_in, 'fullname': user.iloc[0]['fullname']})
             navigate("Admin" if user.iloc[0]['role'] == 'admin' else "Booking")
-        else: st.error("❌ ข้อมูลไม่ถูกต้อง")
+        else: st.error("❌ เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง")
 
 # --- หน้าจองคิว & Messenger (ลูกค้า) ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
@@ -120,12 +119,19 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
             b_date = st.date_input("เลือกวันที่")
             b_time = st.selectbox("เลือกเวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
             b_service = st.selectbox("เลือกบริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
+            
             if st.form_submit_button("ยืนยันการจอง"):
                 df_b = get_data("Bookings")
-                # ตรวจสอบการจองซ้ำ (ไม่เกิน 2 คิวต่อช่วงเวลา)
-                count = len(df_b[(df_b['date'] == str(b_date)) & (df_b['time'] == b_time)])
-                if count >= 2:
-                    st.error(f"⚠️ เวลา {b_time} เต็มแล้ว (รับ 2 ท่านต่อช่วงเวลา) กรุณาเลือกเวลาอื่น")
+                
+                # ตรวจสอบ: จองไปแล้วหรือยังในวันนั้น
+                user_daily_check = df_b[(df_b['username'] == st.session_state.username) & (df_b['date'] == str(b_date))]
+                # ตรวจสอบ: จำนวนคิวรวมในเวลาเดียวกัน (จำกัด 2)
+                time_slot_check = len(df_b[(df_b['date'] == str(b_date)) & (df_b['time'] == b_time)])
+                
+                if not user_daily_check.empty:
+                    st.error(f"⚠️ คุณมีการจองในวันที่ {b_date} อยู่แล้ว หากต้องการเปลี่ยนเวลา กรุณายกเลิกคิวเดิมในหน้า 'ประวัติคิว' ก่อนครับ")
+                elif time_slot_check >= 2:
+                    st.error(f"⚠️ เวลา {b_time} ของวันที่ {b_date} เต็มแล้ว (จำกัด 2 ท่าน) กรุณาเลือกช่วงเวลาอื่น")
                 else:
                     q_id = str(int(datetime.now().timestamp()))
                     new_b = pd.DataFrame([{"id": q_id, "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_date), "time": b_time, "service": b_service, "status": "รอรับบริการ"}])
@@ -140,9 +146,9 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
         else:
             for _, row in my_queues.iterrows():
                 with st.container(border=True):
-                    c1, c2 = st.columns([4, 1])
-                    c1.write(f"**{row['service']}** | 📅 {row['date']} ⏰ {row['time']} | สถานะ: `{row['status']}`")
-                    if c2.button("❌ ยกเลิก", key=f"del_{row['id']}"):
+                    c_info, c_btn = st.columns([4, 1])
+                    c_info.write(f"**{row['service']}** | 📅 {row['date']} ⏰ {row['time']} | สถานะ: `{row['status']}`")
+                    if c_btn.button("❌ ยกเลิก", key=f"del_{row['id']}"):
                         df_b = df_b[df_b['id'] != row['id']]
                         conn.update(worksheet="Bookings", data=df_b); st.rerun()
 
@@ -162,7 +168,7 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
                 new_m = pd.DataFrame([{"id": str(int(datetime.now().timestamp())), "username": st.session_state.username, "message": m_text, "timestamp": datetime.now().strftime("%H:%M"), "admin_reply": ""}])
                 conn.update(worksheet="Messages", data=pd.concat([df_m, new_m], ignore_index=True)); st.rerun()
 
-# --- หน้า Admin (จัดการแชทด้วยชื่อ) ---
+# --- หน้า Admin (จัดการแชท & คิว) ---
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
     at1, at2 = st.tabs(["📅 คิวลูกค้า", "📩 แชทลูกค้า"])
     with at1: st.dataframe(get_data("Bookings"), use_container_width=True)
@@ -178,17 +184,17 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                 if m.get('admin_reply'): st.write(f"🤖 Admin: {m['admin_reply']}")
             with st.form("rep"):
                 ans = st.text_input("ตอบกลับ:")
-                if st.form_submit_button("ส่ง"):
+                if st.form_submit_button("ส่งคำตอบ"):
                     idx = df_m[df_m['username'] == sel_u].index[-1]
                     df_m.at[idx, 'admin_reply'] = ans
                     conn.update(worksheet="Messages", data=df_m); st.rerun()
 
-# --- หน้าคิววันนี้ (สำหรับบุคคลทั่วไป) ---
+# --- หน้าViewQueues ---
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 คิววันนี้")
     df_b = get_data("Bookings")
     active = df_b[df_b['date'] == datetime.now().strftime("%Y-%m-%d")]
-    st.table(active[['time', 'service', 'fullname']]) if not active.empty else st.write("ยังไม่มีคิววันนี้")
+    st.table(active[['time', 'service', 'fullname']]) if not active.empty else st.write("ยังไม่มีคิวจองวันนี้")
 
 # --- หน้า Register ---
 elif st.session_state.page == "Register":
