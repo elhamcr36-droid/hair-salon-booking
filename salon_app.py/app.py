@@ -54,7 +54,7 @@ with m_cols[1]:
 
 if not st.session_state.logged_in:
     with m_cols[3]: 
-        if st.button("📝 สมัคร"): navigate("Register")
+        if st.button("📝 สมัครสมาชิก"): navigate("Register")
     with m_cols[4]: 
         if st.button("🔑 เข้าสู่ระบบ"): navigate("Login")
 else:
@@ -85,7 +85,7 @@ if st.session_state.page == "Home":
     c1, c2 = st.columns([1, 1])
     with c1:
         st.subheader("📞 ติดต่อเรา")
-        st.write("📱 **เบอร์โทร:** 081-735-4210")
+        st.write("📱 **เบอร์โทร:** 081-222-2222")
         st.write("💬 **LINE ID:** @222salon")
         st.write("🔵 **Facebook:** 222 Salon")
     with c2:
@@ -109,7 +109,7 @@ elif st.session_state.page == "Register":
 
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
-    u_in = st.text_input("Username หรือ เบอร์โทรศัพท์").strip()
+    u_in = st.text_input("เบอร์โทรศัพท์").strip()
     p_in = st.text_input("รหัสผ่าน", type="password").strip()
     if st.button("ตกลง", type="primary"):
         if u_in == "admin222" and p_in == "222":
@@ -124,7 +124,7 @@ elif st.session_state.page == "Login":
             else: st.error("❌ ข้อมูลไม่ถูกต้อง")
 
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
-    t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิว", "💬 แชทกับร้าน"])
+    t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิวของฉัน", "💬 แชทกับร้าน"])
     with t1:
         with st.form("b_form"):
             b_d = st.date_input("เลือกวันที่", min_value=datetime.now().date())
@@ -145,7 +145,7 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
                     if not is_time_taken.empty:
                         st.error(f"❌ เวลา {b_t} ของวันที่ {b_d} มีผู้จองแล้วครับ")
                     elif not is_user_booked.empty:
-                        st.warning(f"⚠️ คุณมีคิวที่รอรับบริการในวันที่ {b_d} อยู่แล้วครับ (ไม่สามารถจองซ้ำวันเดียวกันได้)")
+                        st.warning(f"⚠️ คุณมีคิวที่รอรับบริการในวันที่ {b_d} อยู่แล้วครับ (ไม่สามารถจองซ้ำวันเดียวกันได้ถ้าต้องการเเก้ไขคิว กรุณายกเลิกคิวเเล้วทําการจองใหม่ค่ะ)")
                     else:
                         new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
                         conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
@@ -234,4 +234,5 @@ elif st.session_state.page == "ViewQueues":
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
         else: st.info(f"ไม่มีการจองในวันนี้ ({today_str})")
+
 
