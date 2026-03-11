@@ -18,7 +18,15 @@ st.markdown("""
             box-shadow: 2px 4px 12px rgba(0,0,0,0.08); color: #000000 !important;
         }
         .price-text { float: right; color: #FF4B4B; font-weight: bold; }
-        .contact-section { background-color: #f9f9f9; padding: 20px; border-radius: 15px; text-align: center; }
+        .contact-section { 
+            background-color: #ffffff; 
+            padding: 30px; 
+            border-radius: 15px; 
+            text-align: center; 
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid #eeeeee;
+        }
+        .contact-section a:hover { text-decoration: underline !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -83,14 +91,26 @@ if st.session_state.page == "Home":
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
 
     st.divider()
-    # ปรับส่วนติดต่อเราให้ขยายกว้างขึ้นแทนที่แผนที่
-    st.markdown("""
+    # ลิงก์ Google Maps ไปยังที่อยู่ที่ระบุ
+    map_link = "https://www.google.com/maps/search/?api=1&query=222+Tesaban+1+Alley,+Tambon+Bo+Yang,+Amphoe+Mueang+Songkhla,+Chang+Wat+Songkhla+90000,+Thailand"
+    
+    st.markdown(f"""
         <div class="contact-section">
-            <h3>📞 ติดต่อเรา</h3>
-            <p><b>📱 เบอร์โทร:</b> 081-222-2222 &nbsp; | &nbsp; <b>💬 LINE ID:</b> @222salon &nbsp; | &nbsp; <b>🔵 Facebook:</b> 222 Salon</p>
-            <p>📍 พิกัด: 222 ถนน เทศบาล 1 (ใกล้ศาลาว่าการ)</p>
+            <h3 style="color: #FF4B4B;">📞 ติดต่อเรา</h3>
+            <p style="font-size: 1.1em;">
+                <b>📱 เบอร์โทร:</b> 081-222-2222 &nbsp; | &nbsp; 
+                <b>💬 LINE ID:</b> @222salon &nbsp; | &nbsp; 
+                <b>🔵 Facebook:</b> 222 Salon
+            </p>
+            <p style="margin-top: 15px; padding: 10px; background-color: #fff5f5; border-radius: 10px; display: inline-block;">
+                📍 <b>พิกัด:</b> <a href="{map_link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">
+                222 ถนน เทศบาล 1 (คลิกเพื่อดูแผนที่ Google Maps)
+                </a>
+            </p>
         </div>
     """, unsafe_allow_html=True)
+
+# ... (ส่วนที่เหลือของโค้ด Register, Login, Booking, Admin เหมือนเดิม) ...
 
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
