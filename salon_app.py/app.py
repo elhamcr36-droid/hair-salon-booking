@@ -3,6 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 import uuid
+import time
 
 # --- 1. CONFIG & STYLING ---
 st.set_page_config(page_title="222-Salon-Final", layout="wide", initial_sidebar_state="collapsed")
@@ -33,7 +34,8 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data(sheet_name):
     try:
-        df = conn.read(worksheet=sheet_name, ttl="0s")
+        # ใช้ ttl=0 เพื่อให้ดึงข้อมูลใหม่ล่าสุดเสมอจาก Google Sheets
+        df = conn.read(worksheet=sheet_name, ttl=0)
         if df is None or df.empty: return pd.DataFrame()
         df = df.dropna(how='all')
         df.columns = [str(c).strip().lower() for c in df.columns]
@@ -45,11 +47,10 @@ def get_data(sheet_name):
     except:
         return pd.DataFrame()
 
-# ฟังก์ชันเช็คข้อความที่ยังไม่ได้ตอบ (สำหรับระบบแจ้งเตือน)
 def get_new_msg_count():
     df_m = get_data("Messages")
     if not df_m.empty:
-        # นับข้อความที่ช่อง admin_reply ว่างเปล่า
+        # นับข้อความที่ admin_reply ยังว่างอยู่เพื่อทำแจ้งเตือน
         unreplied = df_m[df_m['admin_reply'] == ""]
         return len(unreplied)
     return 0
@@ -78,7 +79,7 @@ else:
     role = st.session_state.get('user_role')
     with m_cols[2]:
         if role == 'admin':
-            # แสดงจุดสีแดงถ้ามีข้อความใหม่
+            # ระบบจุดแจ้งเตือนสีแดงสำหรับ Admin
             new_msgs = get_new_msg_count()
             lbl = f"📊 จัดการร้าน {'🔴' if new_msgs > 0 else ''}"
             if st.button(lbl): navigate("Admin")
@@ -105,24 +106,45 @@ if st.session_state.page == "Home":
 
     st.divider()
     
-    # ลิงก์ Google Maps ตามพิกัดที่ระบุ
-    map_link = "https://www.google.com/maps/search/?api=1&query=222+Tesaban+1+Alley+Bo+Yang+Songkhla"
+    # พิกัดร้านพร้อมลิงก์ Google Maps
+    map_link = "https://www.google.com/maps/search/?api=1&query=222+Tesaban+1+Alley+Songkhla"
     
     st.markdown(f"""
         <div class="contact-section">
-            <h3 style="color: #FF4B4B; margin-bottom: 15px;">📞 ติดต่อเรา</h3>
-            <div style="color: #222222; font-size: 1.1em; margin-bottom: 15px;">
+            <h3 style="color: #FF4B4B; margin-top: 0;">📞 ติดต่อเรา</h3>
+            <div style="color: #222222; font-size: 1.1em; padding: 10px 0;">
                 <span style="margin: 0 15px;"><b>📱 เบอร์โทร:</b> 081-222-2222</span>
                 <span style="margin: 0 15px;"><b>💬 LINE ID:</b> @222salon</span>
                 <span style="margin: 0 15px;"><b>🔵 Facebook:</b> 222 Salon</span>
             </div>
-            <div style="margin-top: 15px;">
-                <a href="{map_link}" target="_blank" style="background-color: #FF4B4B; color: white; padding: 12px 25px; border-radius: 10px; text-decoration: none; font-weight: bold; display: inline-block;">
-                    📍 พิกัด: 222 ถนน เทศบาล 1 (คลิกเปิด Google Maps)
+            <div style="margin-top: 20px;">
+                <a href="{map_link}" target="_blank" style="background-color: #FF4B4B; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: bold; box-shadow: 0px 4px 10px rgba(255, 75, 75, 0.3);">
+                    📍 พิกัด: 222 ถนน เทศบาล 1 (คลิกเพื่อดูแผนที่ Google Maps)
                 </a>
             </div>
         </div>
     """, unsafe_allow_html=True)
+
+elif st.session_state.page == "ViewQueues":
+    st.subheader("📅 รายการคิววันนี้ (Real-time)")
+    # ระบบ Auto-Refresh ทุก 30 วินาทีเพื่อให้ข้อมูลเป็นปัจจุบัน
+    placeholder = st.empty()
+    df_today = get_data("Bookings")
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    
+    with placeholder.container():
+        if not df_today.empty:
+            active = df_today[(df_today['date'] == today_str) & (df_today['status'] == "รอรับบริการ")]
+            if not active.empty:
+                st.write(f"🔔 มีคิวรอรับบริการทั้งหมด {len(active)} คิว")
+                st.table(active[['time', 'service', 'fullname']].sort_values('time'))
+            else:
+                st.info(f"✨ ยังไม่มีการจองในวันนี้ ({today_str})")
+        else:
+            st.info("📅 ยังไม่มีข้อมูลการจอง")
+    
+    time.sleep(30)
+    st.rerun()
 
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
@@ -162,7 +184,6 @@ elif st.session_state.page == "Login":
 
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิวของฉัน", "💬 แชทกับร้าน"])
-    # ... (ส่วน Booking คงเดิม) ...
     with t1:
         with st.form("b_form"):
             b_d = st.date_input("เลือกวันที่", min_value=datetime.now().date())
@@ -199,7 +220,6 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
 
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
     at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 แชทลูกค้า"])
-    # ... (ส่วน Admin/Booking เหมือนเดิม) ...
     with at1:
         df_b = get_data("Bookings")
         if not df_b.empty:
@@ -212,19 +232,19 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
             for _, row in active_qs.iterrows():
                 with st.container(border=True):
                     st.write(f"👤 {row['fullname']} | 📅 {row['date']} | {row['time']}")
-                    if st.button("🗑️ ลบ", key=f"d_{row['id']}"):
-                        conn.update(worksheet="Bookings", data=df_admin[df_admin['id']!=row['id']]); st.rerun()
+                    if st.button("✅ เสร็จสิ้น", key=f"s_{row['id']}"):
+                        df_admin.loc[df_admin['id']==row['id'], 'status'] = "เสร็จสิ้น"
+                        conn.update(worksheet="Bookings", data=df_admin); st.rerun()
     with at3:
         df_msg_admin = get_data("Messages")
-        # แจ้งเตือนใน Tab แชท
+        # แจ้งเตือนข้อความใหม่ใน Tab แชท
         new_count = len(df_msg_admin[df_msg_admin['admin_reply'] == ""])
         if new_count > 0:
             st.error(f"🔔 คุณมี {new_count} ข้อความที่ยังไม่ได้ตอบ!")
             
         df_users_info = get_data("Users")
-        if not df_msg_admin.empty and not df_users_info.empty:
+        if not df_msg_admin.empty:
             user_map = dict(zip(df_users_info['phone'], df_users_info['fullname']))
-            # เรียงลูกค้าที่มีข้อความใหม่ขึ้นก่อน
             unique_usernames = df_msg_admin['username'].unique()
             sel_u = st.selectbox("เลือกแชทลูกค้า", options=unique_usernames, 
                                  format_func=lambda x: f"{'🔴 ' if df_msg_admin[(df_msg_admin['username']==x) & (df_msg_admin['admin_reply']=='')].shape[0] > 0 else ''}👤 {user_map.get(x, x)}")
@@ -241,12 +261,3 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                                 conn.update(worksheet="Messages", data=df_msg_admin); st.rerun()
                 if m['admin_reply']:
                     st.chat_message("assistant").info(m['admin_reply'])
-
-elif st.session_state.page == "ViewQueues":
-    st.subheader("📅 รายการคิววันนี้")
-    df_today = get_data("Bookings")
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    if not df_today.empty:
-        active = df_today[(df_today['date'] == today_str) & (df_today['status'] == "รอรับบริการ")]
-        if not active.empty: st.table(active[['time', 'service', 'fullname']])
-        else: st.info("วันนี้ยังไม่มีการจอง")
