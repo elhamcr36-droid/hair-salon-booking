@@ -6,7 +6,7 @@ from datetime import datetime
 # --- 1. SETTINGS & CSS ---
 st.set_page_config(page_title="222-Salon", layout="wide", initial_sidebar_state="collapsed")
 
-# 📍 ลิงก์แผนที่ร้าน (แก้ไขเป็นลิงก์จริงของคุณ)
+# 📍 ลิงก์แผนที่ร้าน
 SHOP_LOCATION_URL = "https://goo.gl/maps/your-actual-link" 
 
 st.markdown("""
@@ -28,16 +28,26 @@ st.markdown("""
         /* Dashboard Admin Metrics */
         .metric-card {
             background-color: #ffffff; padding: 20px; border-radius: 15px;
-            border: 2px solid #FF4B4B; text-align: center; color: #1A1A1A; font-weight: bold;
+            border: 2px solid #FF4B4B; text-align: center; color: #1A1A1A !important; font-weight: bold;
         }
 
-        /* กล่องรายการจอง */
-        .booking-item {
-            background-color: #f8f9fa; color: #333; padding: 15px;
-            border-radius: 10px; margin-bottom: 10px; border: 1px solid #ddd;
-        }
+        /* 📞 Contact Box - ปรับปรุงสีตัวหนังสือให้เข้มชัดเจน */
         .contact-box {
-            text-align: center; background-color: #f1f3f5; padding: 20px; border-radius: 15px;
+            text-align: center; 
+            background-color: #ffffff !important; 
+            padding: 20px; 
+            border-radius: 15px;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.1);
+            min-height: 150px;
+            color: #1A1A1A !important; /* บังคับสีตัวหนังสือเข้ม */
+        }
+        .contact-box h3 { color: #FF4B4B !important; margin-bottom: 10px; font-size: 1.2rem; }
+        .contact-box p { color: #333333 !important; font-weight: 500; font-size: 1rem; line-height: 1.4; }
+
+        /* รายการคิว */
+        .booking-item {
+            background-color: #ffffff; color: #333; padding: 15px;
+            border-radius: 10px; margin-bottom: 10px; border: 1px solid #ddd;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -56,18 +66,15 @@ def get_data(sheet_name):
                 "Messages": ["id", "username", "message", "timestamp", "status"]
             }
             return pd.DataFrame(columns=cols.get(sheet_name, []))
-        
         df.columns = [str(c).strip() for c in df.columns]
         df = df.fillna("").map(lambda x: str(x).replace('.0', '') if isinstance(x, (float, int)) else str(x))
-        
         for col in ['username', 'phone']:
             if col in df.columns:
                 df[col] = df[col].apply(lambda x: str(x).strip().zfill(10) if x and str(x).isdigit() else str(x))
         return df
-    except: 
-        return pd.DataFrame()
+    except: return pd.DataFrame()
 
-# --- 2. NAVIGATION & SESSION STATE ---
+# --- 2. NAVIGATION ---
 if 'page' not in st.session_state: st.session_state.page = "Home"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
@@ -105,7 +112,6 @@ if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (หยุดทุกวันพุธ)")
     
-    # --- Services ---
     st.subheader("📋 รายการบริการและราคา")
     services = {
         "✂️ ตัดผมชาย": "150 - 350 บาท", 
@@ -122,15 +128,15 @@ if st.session_state.page == "Home":
     
     st.divider()
 
-    # --- ส่วนช่องทางติดต่อ (เพิ่มกลับมาให้แล้วครับ) ---
     st.subheader("📞 ช่องทางการติดต่อ")
     c1, c2, c3 = st.columns(3)
+    # ใช้ HTML เพื่อบังคับสีตัวหนังสือให้เข้มตลอดเวลา
     with c1:
-        st.markdown("<div class='contact-box'><h3>📞 โทรศัพท์</h3><p>081-222-XXXX</p></div>", unsafe_allow_html=True)
+        st.markdown("""<div class='contact-box'><h3>📞 โทรศัพท์</h3><p>081-222-XXXX</p></div>""", unsafe_allow_html=True)
     with c2:
-        st.markdown("<div class='contact-box'><h3>💬 โซเชียล</h3><p>Line: @222salon<br>FB: 222 Salon</p></div>", unsafe_allow_html=True)
+        st.markdown("""<div class='contact-box'><h3>💬 โซเชียล</h3><p>Line: @222salon<br>FB: 222 Salon</p></div>""", unsafe_allow_html=True)
     with c3:
-        st.markdown("<div class='contact-box'><h3>📍 ที่ตั้ง</h3><p>ย่านสุขุมวิท กรุงเทพฯ</p></div>", unsafe_allow_html=True)
+        st.markdown("""<div class='contact-box'><h3>📍 ที่ตั้ง</h3><p>ย่านสุขุมวิท กรุงเทพฯ</p></div>""", unsafe_allow_html=True)
 
     st.write("")
     st.link_button("📍 นำทางไปที่ร้าน (Google Maps)", SHOP_LOCATION_URL, type="primary", use_container_width=True)
@@ -146,7 +152,6 @@ elif st.session_state.page == "Booking":
             d = st.date_input("เลือกวันที่จอง", min_value=datetime.now().date())
             t = st.selectbox("เลือกเวลา", [f"{h:02d}:{m}" for h in range(9, 20) for m in ["00", "30"] if "09:30" <= f"{h:02d}:{m}" <= "19:00"])
             submit = st.form_submit_button("ยืนยันการจองคิว")
-            
             if submit:
                 df_b = get_data("Bookings")
                 booked_count = len(df_b[(df_b['date'] == str(d)) & (df_b['time'] == t) & (df_b['status'] == 'รอรับบริการ')])
@@ -188,7 +193,6 @@ elif st.session_state.page == "Booking":
 elif st.session_state.page == "Admin":
     st.subheader("📊 ระบบจัดการสำหรับเจ้าของร้าน")
     adm_t1, adm_t2 = st.tabs(["📅 จัดการคิว", "📩 ข้อความลูกค้า"])
-    
     with adm_t1:
         df_b = get_data("Bookings")
         if not df_b.empty:
@@ -197,7 +201,6 @@ elif st.session_state.page == "Admin":
             c1.markdown(f"<div class='metric-card'>👥 ลูกค้าวันนี้<br>{len(df_b[df_b['date'] == today_str])} ท่าน</div>", unsafe_allow_html=True)
             c2.markdown(f"<div class='metric-card'>📅 วันนี้<br>{today_str}</div>", unsafe_allow_html=True)
             c3.markdown(f"<div class='metric-card'>⏳ คิวรอ<br>{len(df_b[df_b['status'] == 'รอรับบริการ'])} คิว</div>", unsafe_allow_html=True)
-            
             st.divider()
             pending_q = df_b[df_b['status'] == 'รอรับบริการ'].sort_values(['date', 'time'])
             for _, row in pending_q.iterrows():
@@ -209,7 +212,6 @@ elif st.session_state.page == "Admin":
                 if col_b2.button("🗑️ ลบ", key=f"del_{row['id']}"):
                     df_b = df_b[df_b['id'] != row['id']]
                     conn.update(worksheet="Bookings", data=df_b); st.rerun()
-
     with adm_t2:
         df_m = get_data("Messages")
         unread = df_m[df_m['status'] == 'ยังไม่ได้อ่าน']
@@ -223,7 +225,7 @@ elif st.session_state.page == "Admin":
                         conn.update(worksheet="Messages", data=df_m); st.rerun()
         else: st.write("ไม่มีข้อความใหม่")
 
-# --- 6. AUTHENTICATION ---
+# --- 6. AUTH ---
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
     u = st.text_input("Username (เบอร์โทร)")
@@ -234,10 +236,10 @@ elif st.session_state.page == "Login":
             navigate("Admin")
         else:
             df_u = get_data("Users")
-            u_clean = u.zfill(10) if u.isdigit() else u
-            user = df_u[(df_u['username'] == u_clean) & (df_u['password'] == p)]
+            u_c = u.zfill(10) if u.isdigit() else u
+            user = df_u[(df_u['username'] == u_c) & (df_u['password'] == p)]
             if not user.empty:
-                st.session_state.update({'logged_in': True, 'user_role': 'user', 'username': u_clean, 'fullname': user.iloc[0]['fullname']})
+                st.session_state.update({'logged_in': True, 'user_role': 'user', 'username': u_c, 'fullname': user.iloc[0]['fullname']})
                 navigate("Booking")
             else: st.error("ข้อมูลไม่ถูกต้อง")
 
