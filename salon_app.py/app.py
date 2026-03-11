@@ -90,8 +90,7 @@ if st.session_state.page == "Home":
         st.write("🔵 **Facebook:** 222 Salon")
     with c2:
         st.subheader("📍 พิกัดร้าน")
-        # อย่าลืมเปลี่ยน URL map_url ด้านล่างเป็นของร้านจริง
-        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.503!2d100.501!3d13.756!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDQ1JzIxLjYiTiAxMDDCsDMwJzAzLjYiRQ!5e0!3m2!1sth!2sth!4v1620000000000"
+        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.311342616235!2d100.523186!3d13.756331!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDQ1JzIyLjgiTiAxMDDCsDMxJzIzLjUiRQ!5e0!3m2!1sth!2sth!4v1700000000000"
         components.html(f"""
             <iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>
         """, height=240)
@@ -112,10 +111,11 @@ elif st.session_state.page == "Register":
 
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
-    u_in = st.text_input("เบอร์โทรศัพท์").strip()
+    u_in = st.text_input("Username หรือ เบอร์โทรศัพท์").strip()
     p_in = st.text_input("รหัสผ่าน", type="password").strip()
     if st.button("ตกลง", type="primary"):
-        if (u_in == "0817354210" and p_in == "1") or (u_in == "admin222" and p_in == "222"):
+        # --- ล็อคสิทธิ์ Admin เฉพาะ admin222 / 222 เท่านั้น ---
+        if u_in == "admin222" and p_in == "222":
             st.session_state.update({'logged_in': True, 'user_role': 'admin', 'username': u_in, 'fullname': 'ผู้ดูแลระบบ'})
             navigate("Admin")
         else:
@@ -124,7 +124,8 @@ elif st.session_state.page == "Login":
             if not user.empty:
                 st.session_state.update({'logged_in': True, 'user_role': 'user', 'username': u_in, 'fullname': user.iloc[0]['fullname']})
                 navigate("Booking")
-            else: st.error("❌ ข้อมูลไม่ถูกต้อง")
+            else: 
+                st.error("❌ ข้อมูลไม่ถูกต้อง หรือคุณไม่มีสิทธิ์ระดับผู้ดูแลระบบ")
 
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิว", "💬 แชทกับร้าน"])
@@ -134,8 +135,7 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
             b_t = st.selectbox("เวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
             b_s = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
             if st.form_submit_button("ยืนยัน"):
-                if b_d.weekday() == 2:
-                    st.error("❌ ร้านปิดทุกวันพุธ")
+                if b_d.weekday() == 2: st.error("❌ ร้านหยุดทุกวันพุธ")
                 else:
                     df_b = get_data("Bookings")
                     is_taken = df_b[(df_b['date'] == str(b_d)) & (df_b['time'] == b_t)] if not df_b.empty else pd.DataFrame()
@@ -170,7 +170,7 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
                 conn.update(worksheet="Messages", data=pd.concat([df_m, new_m], ignore_index=True))
                 st.rerun()
 
-elif st.session_state.page == "Admin" and st.session_state.logged_in:
+elif st.session_state.page == "Admin" and st.session_state.logged_in and st.session_state.user_role == 'admin':
     at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 แชทลูกค้า"])
     df_b = get_data("Bookings")
     with at1:
