@@ -89,15 +89,28 @@ if st.session_state.page == "Home":
         st.write("💬 **LINE ID:** @222salon")
         st.write("🔵 **Facebook:** 222 Salon")
     
-    with c2:
+   with c2:
         st.subheader("📍 พิกัดร้าน")
-        # ลิงก์ปักหมุดตรง 222 Tesaban 1 Alley (ล็อคพิกัดตามรูปภาพ)
-        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.035252818!2d100.5986!3d7.1915!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x304d320000000000%3A0x0!2zMjIyIFRlc2FiYW4gMSBBbGxleSwgQm95YW5nLCBNdWFuZyBTb25na2hsYQ!5e0!3m2!1sth!2sth!4v1710170000000!5m2!1sth!2sth"
+        # ลิงก์สำหรับแสดงแผนที่ในหน้าเว็บ
+        map_embed_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.055624177263!2d100.596041!3d7.1915128!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x304d334d77f40429%3A0x7d80000000000000!2s222%20Tesaban%201%20Alley%2C%20Bo%20Yang%2C%20Mueang%20Songkhla%20District%2C%20Songkhla%2090000!5e0!3m2!1sth!2sth!4v1710170000000!5m2!1sth!2sth"
         
+        # ลิงก์สำหรับให้ลูกค้ากดเปิดในแอป Maps เพื่อนำทาง
+        maps_link = "https://www.google.com/maps/search/?api=1&query=7.1915128,100.596041"
+        
+        # แสดงแผนที่ Embed
         components.html(
-            f'<iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', 
+            f'<iframe src="{map_embed_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', 
             height=240
         )
+        
+        # ปุ่มกดเพื่อเปิดนำทาง
+        st.markdown(f'''
+            <a href="{maps_link}" target="_blank" style="text-decoration: none;">
+                <div style="background-color: #FF4B4B; color: white; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold;">
+                    🚀 กดเพื่อเปิดแผนที่นำทาง (Google Maps)
+                </div>
+            </a>
+        ''', unsafe_allow_html=True)
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
     with st.form("reg_form"):
@@ -247,6 +260,7 @@ elif st.session_state.page == "ViewQueues":
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
         else: st.info(f"ไม่มีการจองในวันนี้ ({today_str})")
+
 
 
 
