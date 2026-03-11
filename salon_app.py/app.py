@@ -3,6 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 import uuid
+import streamlit.components.v1 as components
 
 # --- 1. CONFIG & STYLING ---
 st.set_page_config(page_title="222-Salon-Final", layout="wide", initial_sidebar_state="collapsed")
@@ -72,11 +73,27 @@ st.divider()
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (หยุดทุกวันพุธ)")
+    
+    # --- ส่วนบริการ ---
+    st.subheader("📋 บริการและราคา")
     services = {"✂️ ตัดผมชาย": "150-350 บ.", "💇‍♀️ ตัดผมหญิง": "350-800 บ.", "🚿 สระ-ไดร์": "200-450 บ.", "🎨 ทำสีผม": "1,500 บ.+", "✨ ยืด/ดัด": "1,000 บ.+", "🌿 ทรีทเม้นท์": "500 บ.+"}
     p1, p2 = st.columns(2)
     for i, (name, price) in enumerate(services.items()):
         target = p1 if i % 2 == 0 else p2
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
+
+    # --- ส่วน GPS (Google Maps) ---
+    st.divider()
+    st.subheader("📍 พิกัดร้าน")
+    # ตัวอย่าง URL แผนที่ (ให้เปลี่ยนเป็น Link ของร้านคุณเอง)
+    map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.5025740416!2d100.5283!3d13.7563!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDQ1JzIyLjciTiAxMDDCsDMxJzQxLjkiRQ!5e0!3m2!1sth!2sth!4v1700000000000"
+    
+    components.html(f"""
+        <iframe src="{map_url}" 
+        width="100%" height="400" style="border:0; border-radius:15px;" 
+        allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    """, height=410)
+    st.caption("📱 สามารถใช้นิ้วเลื่อนแผนที่หรือกดขยายเพื่อดูเส้นทางได้")
 
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
@@ -115,10 +132,9 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
             b_d = st.date_input("เลือกวันที่", min_value=datetime.now().date())
             b_t = st.selectbox("เวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"])
             b_s = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
-            
             if st.form_submit_button("ยืนยัน"):
-                if b_d.weekday() == 2: # 2 คือวันพุธ
-                    st.error("❌ ร้านหยุดทุกวันพุธ กรุณาเลือกวันอื่น")
+                if b_d.weekday() == 2:
+                    st.error("❌ ร้านปิดทุกวันพุธ")
                 else:
                     df_b = get_data("Bookings")
                     is_taken = df_b[(df_b['date'] == str(b_d)) & (df_b['time'] == b_t)] if not df_b.empty else pd.DataFrame()
@@ -131,7 +147,6 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
         df_b = get_data("Bookings")
         if not df_b.empty:
             my_qs = df_b[df_b['username'] == st.session_state.username]
-            if my_qs.empty: st.info("ยังไม่มีประวัติการจอง")
             for _, r in my_qs.iterrows():
                 with st.container(border=True):
                     c1, c2 = st.columns([3, 1])
@@ -163,21 +178,17 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
             df_b['price'] = pd.to_numeric(df_b['price'], errors='coerce').fillna(0)
             total = df_b[df_b['status']=='เสร็จสิ้น']['price'].sum()
             st.metric("รายได้รวมทั้งหมด", f"{total:,.0f} บ.")
-            # ตารางสรุปรายการที่เสร็จแล้ว
-            st.write("รายการที่ปิดยอดแล้ว")
-            st.dataframe(df_b[df_b['status']=='เสร็จสิ้น'][['date', 'fullname', 'service', 'price']])
     
     with at2:
         if not df_b.empty:
-            active_qs = df_b[df_b['status'] == "รอรับบริการ"].sort_values(['date', 'time'])
-            if active_qs.empty: st.info("ไม่มีคิวรอรับบริการ")
+            active_qs = df_b[df_b['status'] == "รอรับบริการ"]
             for _, row in active_qs.iterrows():
                 with st.container(border=True):
                     col1, col2 = st.columns([3, 1])
-                    col1.write(f"👤 {row['fullname']} | ⏰ {row['time']} ({row['date']}) | {row['service']}")
+                    col1.write(f"👤 {row['fullname']} | ⏰ {row['time']} ({row['date']})")
                     with col2.popover("✅ เสร็จสิ้น"):
-                        p = st.number_input("ค่าบริการ", min_value=0, key=f"p_{row['id']}")
-                        if st.button("บันทึกยอด", key=f"f_{row['id']}"):
+                        p = st.number_input("ค่าบริการ", key=f"p_{row['id']}")
+                        if st.button("บันทึก", key=f"f_{row['id']}"):
                             df_b.loc[df_b['id']==row['id'], ['status', 'price']] = ["เสร็จสิ้น", str(p)]
                             conn.update(worksheet="Bookings", data=df_b); st.rerun()
                     if col2.button("🗑️ ลบ", key=f"a_del_{row['id']}"):
@@ -187,15 +198,13 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
     with at3:
         df_m = get_data("Messages")
         if not df_m.empty:
-            users_with_msgs = df_m['username'].unique()
-            sel_u = st.selectbox("เลือกแชทลูกค้า", users_with_msgs)
+            sel_u = st.selectbox("เลือกแชทลูกค้า", df_m['username'].unique())
             for _, m in df_m[df_m['username'] == sel_u].iterrows():
                 st.write(f"👤 {sel_u}: {m['message']}")
                 if m['admin_reply']: st.caption(f"🤖 ตอบแล้ว: {m['admin_reply']}")
             with st.form("rep", clear_on_submit=True):
                 ans = st.text_input("ตอบกลับลูกค้า...")
                 if st.form_submit_button("ส่งคำตอบ"):
-                    # อัปเดตคำตอบในแถวล่าสุดของลูกค้านั้นๆ
                     last_idx = df_m[df_m['username'] == sel_u].index[-1]
                     df_m.at[last_idx, 'admin_reply'] = ans
                     conn.update(worksheet="Messages", data=df_m); st.rerun()
@@ -208,5 +217,4 @@ elif st.session_state.page == "ViewQueues":
         active = df_b[(df_b['date'] == today) & (df_b['status'] == "รอรับบริการ")]
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
-        else: st.info(f"ยังไม่มีการจองในวันนี้ ({today})")
-    else: st.info("ยังไม่มีข้อมูลการจองในระบบ")
+        else: st.info("ยังไม่มีการจองในวันนี้")
