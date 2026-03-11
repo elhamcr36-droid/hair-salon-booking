@@ -90,7 +90,7 @@ if st.session_state.page == "Home":
         st.write("🔵 **Facebook:** 222 Salon")
     with c2:
         st.subheader("📍 พิกัดร้าน")
-        map_url = "https://www.google.com/maps/place/222+%E0%B8%96%E0%B8%99%E0%B8%99+%E0%B9%80%E0%B8%97%E0%B8%A8%E0%B8%9A%E0%B8%B2%E0%B8%A5+1+%E0%B8%95%E0%B8%B3%E0%B8%9A%E0%B8%A5%E0%B8%9A%E0%B9%88%E0%B8%AD%E0%B8%A2%E0%B8%B2%E0%B8%87+%E0%B8%AD%E0%B8%B3%E0%B9%80%E0%B8%A0%E0%B8%AD%E0%B9%80%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%87%E0%B8%AA%E0%B8%87%E0%B8%82%E0%B8%A5%E0%B8%B2+%E0%B8%AA%E0%B8%87%E0%B8%82%E0%B8%A5%E0%B8%B2+90000/@7.1915128,100.5982223,17z/data=!3m1!4b1!4m6!3m5!1s0x304d3323c7ad029d:0x7cfb098f4f859e4c!8m2!3d7.1915128!4d100.6007972!16s%2Fg%2F11jylj3r6y?entry=ttu&g_ep=EgoyMDI2MDMwOC4wIKXMDSoASAFQAw%3D%3D"
+        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.553628507342!2d100.523186!3d13.736717!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDQ0JzEyLjIiTiAxMDDCsDMxJzIzLjUiRQ!5e0!3m2!1sen!2sth!4v1640000000000!5m2!1sen!2sth"
         components.html(f'<iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', height=240)
 
 elif st.session_state.page == "Register":
@@ -135,23 +135,18 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
                     st.error("❌ ร้านหยุดวันเสาร์ กรุณาเลือกวันอื่นครับ")
                 else:
                     df_all = get_data("Bookings")
-                    
-                    # 1. ตรวจสอบว่า "เวลานี้" มีคนจองหรือยัง
                     is_time_taken = df_all[(df_all['date'] == str(b_d)) & (df_all['time'] == b_t) & (df_all['status'] != 'ยกเลิก')] if not df_all.empty else pd.DataFrame()
-                    
-                    # 2. ตรวจสอบว่า "ลูกค้าคนนี้" มีคิวค้างอยู่ในวันนั้นแล้วหรือยัง (กันจองเบิ้ลหลายเวลาในวันเดียว)
                     is_user_booked = df_all[(df_all['date'] == str(b_d)) & (df_all['username'] == st.session_state.username) & (df_all['status'] == 'รอรับบริการ')] if not df_all.empty else pd.DataFrame()
 
                     if not is_time_taken.empty:
                         st.error(f"❌ เวลา {b_t} ของวันที่ {b_d} มีผู้จองแล้วครับ")
                     elif not is_user_booked.empty:
-                        st.warning(f"⚠️ คุณมีคิวที่รอรับบริการในวันที่ {b_d} อยู่แล้วครับ (ไม่สามารถจองซ้ำวันเดียวกันได้ถ้าต้องการเเก้ไขคิว กรุณายกเลิกคิวเเล้วทําการจองใหม่ค่ะ)")
+                        st.warning(f"⚠️ คุณมีคิวที่รอรับบริการในวันที่ {b_d} อยู่แล้วครับ")
                     else:
                         new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
                         conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
                         st.success("✅ จองสำเร็จ!")
                         st.balloons()
-    # (ส่วนที่เหลือของโค้ดคงเดิม...)
     with t2:
         st.subheader("📋 ประวัติการจองของคุณ")
         df_history = get_data("Bookings")
@@ -209,21 +204,43 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in and st.sess
                         if b_col2.button("🗑️", key=f"d_{row['id']}"):
                             df_admin = df_admin[df_admin['id'] != row['id']]
                             conn.update(worksheet="Bookings", data=df_admin); st.rerun()
-        else: st.warning("ไม่พบข้อมูลการจอง")
     with at3:
+        # --- ส่วนที่แก้ไข: แสดงชื่อลูกค้าในหน้าแชทแอดมิน ---
         df_msg_admin = get_data("Messages")
-        if not df_msg_admin.empty:
-            sel_u = st.selectbox("เลือกแชทลูกค้า", df_msg_admin['username'].unique())
+        df_users_info = get_data("Users") 
+
+        if not df_msg_admin.empty and not df_users_info.empty:
+            # สร้างแมพ เบอร์โทร -> ชื่อ
+            user_map = dict(zip(df_users_info['phone'], df_users_info['fullname']))
+            unique_usernames = df_msg_admin['username'].unique()
+            
+            # ฟังก์ชันช่วยจัดรูปแบบการแสดงผลใน Dropdown
+            def format_user_label(phone):
+                name = user_map.get(phone, "ไม่พบชื่อในระบบ")
+                return f"👤 {name} ({phone})"
+
+            sel_u = st.selectbox("เลือกแชทลูกค้า", options=unique_usernames, format_func=format_user_label)
+            
+            st.markdown(f"### 💬 แชทกับคุณ {user_map.get(sel_u, 'ไม่ทราบชื่อ')}")
             user_msgs = df_msg_admin[df_msg_admin['username'] == sel_u]
+            
             for idx, m in user_msgs.iterrows():
-                st.markdown(f"**👤 ลูกค้า:** {m['message']}")
-                if m['admin_reply']: st.success(f"🤖 **ตอบกลับแล้ว:** {m['admin_reply']}")
+                with st.chat_message("user"):
+                    st.write(m['message'])
+                    st.caption(f"ส่งเมื่อ: {m.get('timestamp', '')}")
+                
+                if m['admin_reply']: 
+                    with st.chat_message("assistant"):
+                        st.info(m['admin_reply'])
+                
                 with st.expander("ตอบกลับข้อความนี้"):
                     with st.form(key=f"rep_{idx}", clear_on_submit=True):
-                        ans = st.text_input("คำตอบ...")
+                        ans = st.text_input("พิมพ์ข้อความตอบกลับ...")
                         if st.form_submit_button("ส่งคำตอบ"):
                             df_msg_admin.at[idx, 'admin_reply'] = ans
-                            conn.update(worksheet="Messages", data=df_msg_admin); st.rerun()
+                            conn.update(worksheet="Messages", data=df_msg_admin)
+                            st.success("ส่งคำตอบแล้ว!")
+                            st.rerun()
 
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิววันนี้")
@@ -234,5 +251,3 @@ elif st.session_state.page == "ViewQueues":
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
         else: st.info(f"ไม่มีการจองในวันนี้ ({today_str})")
-
-
