@@ -91,9 +91,8 @@ if st.session_state.page == "Home":
     
    with c2:
         st.subheader("📍 พิกัดร้าน")
-        # พิกัดแบบล็อคตำแหน่ง (Embed Mode) สำหรับ 222 ถนนเทศบาล 1 จ.สงขลา
-        # ใช้ลิงก์นี้เพื่อให้ Google Maps แสดงหมุดที่ตำแหน่งที่ถูกต้องในหน้าเว็บ
-        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.038314151381!2d100.5925433!3d7.2001456!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3032d20738491025%3A0x67310e5883870f72!2zMjIyIOC4luC4meC4mSDguYDguJfguLgu4LguJrguKXguLIgMSDguJXguYfguJrguY_guK3guLLguI3guLIg4Lit4Lix4LmA4Lia4Lit4LmA4Lih4Li34Lit4LiH4Liq4Lih4LiC4Lil4LiyIOC4quC4h-C4guC4peC4siA5MDAwMA!5e0!3m2!1sth!2sth!4v1715432100000!5m2!1sth!2sth"
+        # ลิงก์ที่ล็อคพิกัดปักหมุดตรง 222 Tesaban 1 Alley ตามรูปภาพ
+        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15830.347012373024!2d100.5976211!3d7.1915128!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x304d336879810429%3A0xe378604072932385!2zMjIyIFRlc2FiYW4gMSBBbGxleSwgVGFtYm9uIEJvIFlhbmcsIEFtcGhvZSBNdWVhbmcgU29uZ2tobGEsIENoYW5nIFdhdCBTb25na2hsYSA5MDAwMCwgVGhhaWxhbmQ!5e0!3m2!1sth!2sth!4v1710173000000!5m2!1sth!2sth"
         
         components.html(
             f'<iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>', 
@@ -248,5 +247,6 @@ elif st.session_state.page == "ViewQueues":
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
         else: st.info(f"ไม่มีการจองในวันนี้ ({today_str})")
+
 
 
