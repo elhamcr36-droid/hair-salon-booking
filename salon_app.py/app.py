@@ -89,13 +89,13 @@ if st.session_state.page == "Home":
         st.write("💬 **LINE ID:** @222salon")
         st.write("🔵 **Facebook:** 222 Salon")
     
-   with c2:
+    with c2:
         st.subheader("📍 พิกัดร้าน")
-        # ลิงก์ที่ล็อคพิกัดปักหมุดตรง 222 Tesaban 1 Alley ตามรูปภาพ
-        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15830.347012373024!2d100.5976211!3d7.1915128!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x304d336879810429%3A0xe378604072932385!2zMjIyIFRlc2FiYW4gMSBBbGxleSwgVGFtYm9uIEJvIFlhbmcsIEFtcGhvZSBNdWVhbmcgU29uZ2tobGEsIENoYW5nIFdhdCBTb25na2hsYSA5MDAwMCwgVGhhaWxhbmQ!5e0!3m2!1sth!2sth!4v1710173000000!5m2!1sth!2sth"
+        # ลิงก์ปักหมุดตรง 222 Tesaban 1 Alley (ล็อคพิกัดตามรูปภาพ)
+        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.035252818!2d100.5986!3d7.1915!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x304d320000000000%3A0x0!2zMjIyIFRlc2FiYW4gMSBBbGxleSwgQm95YW5nLCBNdWFuZyBTb25na2hsYQ!5e0!3m2!1sth!2sth!4v1710170000000!5m2!1sth!2sth"
         
         components.html(
-            f'<iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>', 
+            f'<iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', 
             height=240
         )
 elif st.session_state.page == "Register":
@@ -247,6 +247,7 @@ elif st.session_state.page == "ViewQueues":
         if not active.empty:
             st.table(active[['time', 'service', 'fullname']].sort_values('time'))
         else: st.info(f"ไม่มีการจองในวันนี้ ({today_str})")
+
 
 
 
