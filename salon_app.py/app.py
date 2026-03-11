@@ -10,7 +10,9 @@ st.markdown("""
     <style>
         [data-testid="stSidebar"] {display: none;}
         .main-header {text-align: center; color: #FF4B4B; font-weight: bold; margin-bottom: 20px;}
-        .stButton>button {width: 100%; border-radius: 10px; font-weight: bold;}
+        .stButton>button {width: 100%; border-radius: 10px; font-weight: bold; transition: 0.3s;}
+        
+        /* สไตล์ราคาและข้อมูลหน้าแรก */
         .price-card {
             background-color: #ffffff !important; padding: 15px; border-radius: 12px;
             border-left: 6px solid #FF4B4B; margin-bottom: 10px;
@@ -18,9 +20,11 @@ st.markdown("""
         }
         .price-card b { color: #000000 !important; display: block; font-size: 1.1rem; }
         .price-text { color: #FF4B4B !important; font-weight: bold; }
+        
         .contact-box {
             text-align: center; background-color: #ffffff !important; padding: 20px; 
             border-radius: 15px; box-shadow: 2px 4px 10px rgba(0,0,0,0.1); color: #000000 !important;
+            border: 1px solid #eee; height: 100%;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -34,7 +38,9 @@ def get_data(sheet_name):
         df = df.dropna(how='all')
         df.columns = [str(c).strip().lower() for c in df.columns]
         for col in df.columns:
+            # ล้างข้อมูลทศนิยมและค่าว่าง
             df[col] = df[col].astype(str).str.strip().replace(r'\.0$', '', regex=True).replace('nan', '')
+            # บังคับเบอร์โทรให้มี 10 หลัก (เติม 0 ข้างหน้าถ้าหายไป)
             if 'phone' in col or 'username' in col:
                 df[col] = df[col].apply(lambda x: '0' + x if len(x) == 9 and x.isdigit() else x)
         return df
@@ -51,7 +57,7 @@ def navigate(p):
 
 st.markdown("<h1 class='main-header'>✂️ 222-Salon</h1>", unsafe_allow_html=True)
 
-# เมนูหลัก
+# แถบเมนูหลัก
 m_cols = st.columns(5)
 with m_cols[0]:
     if st.button("🏠 หน้าแรก"): navigate("Home")
@@ -81,14 +87,20 @@ st.divider()
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (หยุดทุกวันพุธ)")
+    
     st.subheader("📋 รายการบริการและราคา")
-    services = {"✂️ ตัดผมชาย": "150-350 บ.", "💇‍♀️ ตัดผมหญิง": "350-800 บ.", "🚿 สระ-ไดร์": "200-450 บ.", "🎨 ทำสีผม": "1,500 บ.+", "✨ ยืด/ดัด": "1,000 บ.+", "🌿 ทรีทเม้นท์": "500 บ.+"}
+    services = {
+        "✂️ ตัดผมชาย": "150-350 บ.", "💇‍♀️ ตัดผมหญิง": "350-800 บ.", 
+        "🚿 สระ-ไดร์": "200-450 บ.", "🎨 ทำสีผม": "1,500 บ.+", 
+        "✨ ยืด/ดัด": "1,000 บ.+", "🌿 ทรีทเม้นท์": "500 บ.+"
+    }
     p1, p2 = st.columns(2)
     for i, (name, price) in enumerate(services.items()):
         target = p1 if i % 2 == 0 else p2
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
+    
     st.divider()
-    st.subheader("📞 ติดต่อเรา")
+    st.subheader("📞 ช่องทางการติดต่อ")
     c1, c2, c3 = st.columns(3)
     with c1: st.markdown("<div class='contact-box'><h3>📞 โทร</h3><p>081-222-XXXX</p></div>", unsafe_allow_html=True)
     with c2: st.markdown("<div class='contact-box'><h3>💬 Line</h3><p>@222salon</p></div>", unsafe_allow_html=True)
@@ -98,7 +110,7 @@ if st.session_state.page == "Home":
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
     with st.container(border=True):
-        u_in = st.text_input("เบอร์โทรศัพท์").strip()
+        u_in = st.text_input("เบอร์โทรศัพท์", placeholder="เช่น 0812345678").strip()
         p_in = st.text_input("รหัสผ่าน", type="password").strip()
         if st.button("Login", type="primary"):
             if u_in == "admin222" and p_in == "222":
@@ -113,7 +125,7 @@ elif st.session_state.page == "Login":
                         'username': u_in, 'fullname': user.iloc[0]['fullname']
                     })
                     navigate("Booking")
-                else: st.error("❌ เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง")
+                else: st.error("❌ ข้อมูลไม่ถูกต้อง")
 
 # --- หน้าสมัครสมาชิก ---
 elif st.session_state.page == "Register":
@@ -130,23 +142,26 @@ elif st.session_state.page == "Register":
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติ", "💬 Messenger"])
     with t3:
-        st.subheader("💬 ห้องแชทส่วนตัว")
+        st.subheader("💬 Messenger")
         df_m = get_data("Messages")
         chat_box = st.container(height=400, border=True)
         with chat_box:
             my_msgs = df_m[df_m['username'] == st.session_state.username]
-            for _, m in my_msgs.iterrows():
-                col_m, col_d = st.columns([5, 1])
-                with col_m:
-                    with st.chat_message("user"):
-                        st.write(m['message'])
-                        st.caption(f"🕒 {m['timestamp']}")
-                if col_d.button("🗑️", key=f"del_{m['id']}"):
-                    df_m = df_m[df_m['id'] != m['id']]
-                    conn.update(worksheet="Messages", data=df_m); st.rerun()
-                if m.get('admin_reply'):
-                    with st.chat_message("assistant", avatar="✂️"): st.write(m['admin_reply'])
-        
+            if my_msgs.empty:
+                st.write("ยังไม่มีข้อความ... เริ่มคุยกับเราได้เลย!")
+            else:
+                for _, m in my_msgs.iterrows():
+                    col_m, col_d = st.columns([5, 1])
+                    with col_m:
+                        with st.chat_message("user"):
+                            st.write(m['message'])
+                            st.caption(f"🕒 {m['timestamp']}")
+                        if m.get('admin_reply'):
+                            with st.chat_message("assistant", avatar="✂️"): st.write(m['admin_reply'])
+                    if col_d.button("🗑️", key=f"del_{m['id']}"):
+                        df_m = df_m[df_m['id'] != m['id']]
+                        conn.update(worksheet="Messages", data=df_m); st.rerun()
+
         with st.form("send_msg", clear_on_submit=True):
             m_text = st.text_input("พิมพ์ข้อความ...")
             if st.form_submit_button("ส่ง"):
@@ -166,31 +181,28 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
         df_m = get_data("Messages")
         df_u = get_data("Users")
         if not df_m.empty:
-            # สร้างการเชื่อมโยง เบอร์โทร -> ชื่อ
+            # สร้างแผนผังชื่อลูกค้า
             user_map = dict(zip(df_u['phone'], df_u['fullname']))
             unique_users = [u for u in df_m['username'].unique() if u != 'Admin']
             
-            # ช่องเลือกชื่อลูกค้า (ไฮไลท์ที่คุณต้องการ)
+            # ตัวเลือกชื่อลูกค้าใน Selectbox
             options = {u: f"{user_map.get(u, 'ลูกค้าใหม่')} ({u})" for u in unique_users}
             if options:
                 sel_u = st.selectbox("เลือกแชทลูกค้า:", options.keys(), format_func=lambda x: options[x])
-                
                 for _, m in df_m[df_m['username'] == sel_u].iterrows():
                     with st.chat_message("user"): st.write(m['message'])
                     if m['admin_reply']:
                         with st.chat_message("assistant", avatar="✂️"): st.write(m['admin_reply'])
-                
                 with st.form("admin_reply_form"):
                     ans = st.text_input("ตอบกลับ:")
                     if st.form_submit_button("ส่งคำตอบ"):
                         idx = df_m[df_m['username'] == sel_u].index[-1]
                         df_m.at[idx, 'admin_reply'] = ans
                         conn.update(worksheet="Messages", data=df_m); st.rerun()
-            else: st.write("ไม่มีข้อความใหม่")
 
 # --- หน้า ViewQueues ---
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 คิววันนี้")
     df_b = get_data("Bookings")
     active = df_b[df_b['date'] == datetime.now().strftime("%Y-%m-%d")]
-    st.table(active[['time', 'service']]) if not active.empty else st.write("ไม่มีคิว")
+    st.table(active[['time', 'service']]) if not active.empty else st.write("ยังไม่มีคิวจอง")
