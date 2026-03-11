@@ -74,7 +74,6 @@ if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (หยุดทุกวันพุธ)")
     
-    # --- ส่วนบริการ ---
     st.subheader("📋 บริการและราคา")
     services = {"✂️ ตัดผมชาย": "150-350 บ.", "💇‍♀️ ตัดผมหญิง": "350-800 บ.", "🚿 สระ-ไดร์": "200-450 บ.", "🎨 ทำสีผม": "1,500 บ.+", "✨ ยืด/ดัด": "1,000 บ.+", "🌿 ทรีทเม้นท์": "500 บ.+"}
     p1, p2 = st.columns(2)
@@ -82,18 +81,20 @@ if st.session_state.page == "Home":
         target = p1 if i % 2 == 0 else p2
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
 
-    # --- ส่วน GPS (Google Maps) ---
     st.divider()
-    st.subheader("📍 พิกัดร้าน")
-    # ตัวอย่าง URL แผนที่ (ให้เปลี่ยนเป็น Link ของร้านคุณเอง)
-    map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.5025740416!2d100.5283!3d13.7563!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDQ1JzIyLjciTiAxMDDCsDMxJzQxLjkiRQ!5e0!3m2!1sth!2sth!4v1700000000000"
-    
-    components.html(f"""
-        <iframe src="{map_url}" 
-        width="100%" height="400" style="border:0; border-radius:15px;" 
-        allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-    """, height=410)
-    st.caption("📱 สามารถใช้นิ้วเลื่อนแผนที่หรือกดขยายเพื่อดูเส้นทางได้")
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        st.subheader("📞 ติดต่อเรา")
+        st.write("📱 **เบอร์โทร:** 081-735-4210")
+        st.write("💬 **LINE ID:** @222salon")
+        st.write("🔵 **Facebook:** 222 Salon")
+    with c2:
+        st.subheader("📍 พิกัดร้าน")
+        # อย่าลืมเปลี่ยน URL map_url ด้านล่างเป็นของร้านจริง
+        map_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3875.503!2d100.501!3d13.756!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTPCsDQ1JzIxLjYiTiAxMDDCsDMwJzAzLjYiRQ!5e0!3m2!1sth!2sth!4v1620000000000"
+        components.html(f"""
+            <iframe src="{map_url}" width="100%" height="230" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>
+        """, height=240)
 
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
@@ -172,13 +173,11 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
     at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 แชทลูกค้า"])
     df_b = get_data("Bookings")
-    
     with at1:
         if not df_b.empty:
             df_b['price'] = pd.to_numeric(df_b['price'], errors='coerce').fillna(0)
             total = df_b[df_b['status']=='เสร็จสิ้น']['price'].sum()
             st.metric("รายได้รวมทั้งหมด", f"{total:,.0f} บ.")
-    
     with at2:
         if not df_b.empty:
             active_qs = df_b[df_b['status'] == "รอรับบริการ"]
@@ -194,7 +193,6 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                     if col2.button("🗑️ ลบ", key=f"a_del_{row['id']}"):
                         df_b = df_b[df_b['id'] != row['id']]
                         conn.update(worksheet="Bookings", data=df_b); st.rerun()
-
     with at3:
         df_m = get_data("Messages")
         if not df_m.empty:
