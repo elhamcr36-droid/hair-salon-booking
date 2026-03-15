@@ -34,7 +34,6 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data(sheet_name):
     try:
-        # ใช้ ttl=0 เพื่อให้ดึงข้อมูลใหม่ล่าสุดเสมอจาก Google Sheets
         df = conn.read(worksheet=sheet_name, ttl=0)
         if df is None or df.empty: return pd.DataFrame()
         df = df.dropna(how='all')
@@ -50,7 +49,6 @@ def get_data(sheet_name):
 def get_new_msg_count():
     df_m = get_data("Messages")
     if not df_m.empty:
-        # นับข้อความที่ admin_reply ยังว่างอยู่เพื่อทำแจ้งเตือน
         unreplied = df_m[df_m['admin_reply'] == ""]
         return len(unreplied)
     return 0
@@ -79,7 +77,6 @@ else:
     role = st.session_state.get('user_role')
     with m_cols[2]:
         if role == 'admin':
-            # ระบบจุดแจ้งเตือนสีแดงสำหรับ Admin
             new_msgs = get_new_msg_count()
             lbl = f"📊 จัดการร้าน {'🔴' if new_msgs > 0 else ''}"
             if st.button(lbl): navigate("Admin")
@@ -105,10 +102,7 @@ if st.session_state.page == "Home":
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
 
     st.divider()
-    
-    # พิกัดร้านพร้อมลิงก์ Google Maps
-    map_link = "https://www.google.com/maps/search/?api=1&query=222+Tesaban+1+Alley+Songkhla"
-    
+    map_link = "https://maps.google.com"
     st.markdown(f"""
         <div class="contact-section">
             <h3 style="color: #FF4B4B; margin-top: 0;">📞 ติดต่อเรา</h3>
@@ -119,7 +113,7 @@ if st.session_state.page == "Home":
             </div>
             <div style="margin-top: 20px;">
                 <a href="{map_link}" target="_blank" style="background-color: #FF4B4B; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: bold; box-shadow: 0px 4px 10px rgba(255, 75, 75, 0.3);">
-                    📍 พิกัด: 222 ถนน เทศบาล 1 (คลิกเพื่อดูแผนที่ Google Maps)
+                    📍 พิกัด: 222 ถนน เทศบาล 1 (คลิกเพื่อดูแผนที่)
                 </a>
             </div>
         </div>
@@ -127,7 +121,6 @@ if st.session_state.page == "Home":
 
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิววันนี้ (Real-time)")
-    # ระบบ Auto-Refresh ทุก 30 วินาทีเพื่อให้ข้อมูลเป็นปัจจุบัน
     placeholder = st.empty()
     df_today = get_data("Bookings")
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -220,44 +213,59 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
 
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
     at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 แชทลูกค้า"])
+    
     with at1:
         df_b = get_data("Bookings")
         if not df_b.empty:
             df_b['price'] = pd.to_numeric(df_b['price'], errors='coerce').fillna(0)
             st.metric("รายได้รวม", f"{df_b[df_b['status']=='เสร็จสิ้น']['price'].sum():,.0f} บ.")
+            st.dataframe(df_b[df_b['status']=='เสร็จสิ้น'][['date', 'fullname', 'service', 'price']], use_container_width=True)
+
     with at2:
         df_admin = get_data("Bookings")
         if not df_admin.empty:
-            active_qs = df_admin[df_admin['status'] == "รอรับบริการ"]
-            for _, row in active_qs.iterrows():
-                with st.container(border=True):
-                    st.write(f"👤 {row['fullname']} | 📅 {row['date']} | {row['time']}")
-                    if st.button("✅ เสร็จสิ้น", key=f"s_{row['id']}"):
-                        df_admin.loc[df_admin['id']==row['id'], 'status'] = "เสร็จสิ้น"
-                        conn.update(worksheet="Bookings", data=df_admin); st.rerun()
+            active_qs = df_admin[df_admin['status'] == "รอรับบริการ"].copy()
+            if active_qs.empty:
+                st.info("ไม่มีคิวรอรับบริการ")
+            else:
+                for _, row in active_qs.iterrows():
+                    with st.container(border=True):
+                        c1, c2, c3 = st.columns([2, 1, 1])
+                        with c1:
+                            st.write(f"👤 **{row['fullname']}**")
+                            st.write(f"📅 {row['date']} | ⏰ {row['time']} | {row['service']}")
+                        with c2:
+                            p_val = st.number_input(f"ราคา (บ.)", min_value=0, step=50, key=f"p_{row['id']}")
+                            if st.button("✅ เสร็จสิ้น", key=f"done_{row['id']}", type="primary"):
+                                if p_val > 0:
+                                    df_admin.loc[df_admin['id']==row['id'], ['status', 'price']] = ["เสร็จสิ้น", str(p_val)]
+                                    conn.update(worksheet="Bookings", data=df_admin)
+                                    st.rerun()
+                                else:
+                                    st.warning("กรุณาใส่ราคา")
+                        with c3:
+                            st.write(" ")
+                            if st.button("❌ ยกเลิก", key=f"can_{row['id']}"):
+                                df_admin.loc[df_admin['id']==row['id'], 'status'] = "ยกเลิก"
+                                conn.update(worksheet="Bookings", data=df_admin)
+                                st.rerun()
+
     with at3:
         df_msg_admin = get_data("Messages")
-        # แจ้งเตือนข้อความใหม่ใน Tab แชท
-        new_count = len(df_msg_admin[df_msg_admin['admin_reply'] == ""])
-        if new_count > 0:
-            st.error(f"🔔 คุณมี {new_count} ข้อความที่ยังไม่ได้ตอบ!")
-            
-        df_users_info = get_data("Users")
+        new_count = len(df_msg_admin[df_msg_admin['admin_reply'] == ""]) if not df_msg_admin.empty else 0
+        if new_count > 0: st.error(f"🔔 มี {new_count} ข้อความใหม่!")
+        
         if not df_msg_admin.empty:
-            user_map = dict(zip(df_users_info['phone'], df_users_info['fullname']))
-            unique_usernames = df_msg_admin['username'].unique()
-            sel_u = st.selectbox("เลือกแชทลูกค้า", options=unique_usernames, 
-                                 format_func=lambda x: f"{'🔴 ' if df_msg_admin[(df_msg_admin['username']==x) & (df_msg_admin['admin_reply']=='')].shape[0] > 0 else ''}👤 {user_map.get(x, x)}")
-            
+            unique_u = df_msg_admin['username'].unique()
+            sel_u = st.selectbox("เลือกแชทลูกค้า", unique_u)
             user_msgs = df_msg_admin[df_msg_admin['username'] == sel_u]
             for idx, m in user_msgs.iterrows():
-                with st.chat_message("user"):
-                    st.write(m['message'])
-                    if not m['admin_reply']:
-                        with st.form(key=f"rep_{idx}", clear_on_submit=True):
-                            ans = st.text_input("ตอบกลับ...")
-                            if st.form_submit_button("ส่ง"):
-                                df_msg_admin.at[idx, 'admin_reply'] = ans
-                                conn.update(worksheet="Messages", data=df_msg_admin); st.rerun()
-                if m['admin_reply']:
-                    st.chat_message("assistant").info(m['admin_reply']) 
+                st.chat_message("user").write(m['message'])
+                if not m['admin_reply']:
+                    with st.form(key=f"rep_{idx}", clear_on_submit=True):
+                        ans = st.text_input("ตอบกลับ...")
+                        if st.form_submit_button("ส่ง"):
+                            df_msg_admin.at[idx, 'admin_reply'] = ans
+                            conn.update(worksheet="Messages", data=df_msg_admin); st.rerun()
+                else:
+                    st.chat_message("assistant").info(m['admin_reply'])
