@@ -9,6 +9,7 @@ import hashlib
 # --- 1. CONFIG & STYLING ---
 st.set_page_config(page_title="222-Salon Songkhla", layout="wide", initial_sidebar_state="collapsed")
 
+# ฟังก์ชันเข้ารหัสลับรหัสผ่าน
 def hash_pass(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
@@ -21,6 +22,11 @@ st.markdown("""
             background-color: #ffffff !important; padding: 18px; border-radius: 12px;
             border-left: 6px solid #FF4B4B; margin-bottom: 12px;
             box-shadow: 2px 4px 12px rgba(0,0,0,0.08); color: #000000 !important;
+        }
+        .contact-section {
+            background-color: #ffffff; padding: 25px; border-radius: 15px; 
+            border: 1px solid #eee; text-align: center; color: #000; 
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.05); margin-top: 20px;
         }
         [data-testid="stChatMessage"][data-testid^="stChatMessageUser"] {
             flex-direction: row-reverse !important; background-color: #0084FF !important;
@@ -88,6 +94,7 @@ st.divider()
 
 # --- 4. PAGE LOGIC ---
 
+# 1. หน้าแรก
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (⚠️ หยุดทุกวันเสาร์)")
@@ -99,6 +106,26 @@ if st.session_state.page == "Home":
         target = p1 if i % 2 == 0 else p2
         target.markdown(f'<div class="price-card"><b>{name}</b><span style="float:right; color:#FF4B4B;">{price}</span></div>', unsafe_allow_html=True)
 
+    st.divider()
+    
+    shop_addr = "222 ถนนเทศบาล 1 ตำบลบ่อยาง อำเภอเมืองสงขลา สงขลา 90000"
+    st.markdown(f"""
+        <div class="contact-section">
+            <h3 style="color: #FF4B4B; margin-bottom: 15px;">📞 ติดต่อเรา & พิกัดร้าน</h3>
+            <p style="font-size: 1.1em;">🔵 <b>Facebook:</b> <a href="https://www.facebook.com/222Salon" target="_blank" style="color: #1877F2; text-decoration: none; font-weight: bold;">222Salon</a></p>
+            <p style="font-size: 1.1em;">📱 <b>เบอร์โทรศัพท์:</b> 082-222-2222</p>
+            <p style="font-size: 1.1em;">💬 <b>LINE ID:</b> 222Salaon</p>
+            <hr style="margin: 15px 0; border: 0.5px solid #eee;">
+            <p style="font-size: 1em; color: #555;">📍 <b>ที่อยู่:</b> {shop_addr}</p>
+            <a href="https://www.google.com/maps/search/?api=1&query={shop_addr.replace(' ', '+')}" target="_blank">
+                <button style="background-color: #4285F4; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                    🗺️ เปิดใน Google Maps
+                </button>
+            </a>
+        </div>
+    """, unsafe_allow_html=True)
+
+# 2. หน้าสมัครสมาชิก
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิกใหม่")
     with st.form("reg"):
@@ -114,6 +141,7 @@ elif st.session_state.page == "Register":
                 conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
                 st.success("✅ ลงทะเบียนสำเร็จ!"); time.sleep(1); navigate("Login")
 
+# 3. หน้าเข้าสู่ระบบ
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
     u_in = st.text_input("เบอร์โทรศัพท์")
@@ -122,7 +150,7 @@ elif st.session_state.page == "Login":
         u_clean = u_in.strip()
         p_hashed = hash_pass(p_in.strip())
         
-        if u_clean == "admin222" and p_in == "222": # Admin bypass
+        if u_clean == "admin222" and p_in == "222":
             st.session_state.update({'logged_in': True, 'user_role': 'admin', 'username': u_clean, 'fullname': 'ผู้ดูแลระบบ'})
             navigate("Admin")
         else:
@@ -133,6 +161,7 @@ elif st.session_state.page == "Login":
                 navigate("Booking" if user.iloc[0]['role'] == 'user' else "Admin")
             else: st.error("❌ ข้อมูลไม่ถูกต้อง")
 
+# 4. หน้าจองคิวลูกค้า
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติ", "💬 แชทสอบถาม"])
     df_b = get_data("Bookings")
@@ -140,16 +169,12 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
     with t1:
         active_booking = df_b[(df_b['username'] == st.session_state.username) & (df_b['status'] == "รอรับบริการ")]
         if not active_booking.empty:
-            st.warning("⚠️ คุณมีคิวที่ค้างอยู่ กรุณาจัดการคิวเดิมก่อน")
+            st.warning("⚠️ คุณมีคิวที่รอรับบริการอยู่แล้ว กรุณาจัดการคิวเดิมก่อน")
         else:
             with st.form("b"):
                 bd = st.date_input("เลือกวันที่", min_value=datetime.now().date())
                 all_times = ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"]
-                booked_counts = df_b[(df_b['date'] == str(bd)) & (df_b['status'] == "รอรับบริการ")]['time'].value_counts()
-                full_slots = booked_counts[booked_counts >= 2].index.tolist()
-                available_times = [t for t in all_times if t not in full_slots]
-                
-                bt = st.selectbox("เวลา", available_times)
+                bt = st.selectbox("เวลา", all_times)
                 bs = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
                 if st.form_submit_button("ยืนยัน"):
                     if bd.weekday() == 5: st.error("❌ ร้านปิดวันเสาร์")
@@ -180,6 +205,7 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
             new_m = pd.DataFrame([{"username": st.session_state.username, "sender": "user", "msg": p, "time": datetime.now().strftime("%H:%M")}])
             conn.update(worksheet="Chats", data=pd.concat([df_c, new_m], ignore_index=True)); st.rerun()
 
+# 5. หน้าแอดมิน
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
     at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 แชทลูกค้า"])
     df_adm = get_data("Bookings")
@@ -218,6 +244,7 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                             new_r = pd.DataFrame([{"username": u, "sender": "admin", "msg": rep, "time": datetime.now().strftime("%H:%M")}])
                             conn.update(worksheet="Chats", data=pd.concat([df_ch, new_r], ignore_index=True)); st.rerun()
 
+# 6. หน้าดูคิววันนี้
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิววันนี้")
     df_q = get_data("Bookings")
