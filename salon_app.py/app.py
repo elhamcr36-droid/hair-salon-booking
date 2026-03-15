@@ -32,6 +32,7 @@ font-weight:bold;
 height:3.2em;
 }
 
+/* กล่องบริการ */
 .price-card{
 background:#ffffff;
 padding:18px;
@@ -40,6 +41,7 @@ border-left:6px solid #FF4B4B;
 margin-bottom:12px;
 box-shadow:2px 4px 12px rgba(0,0,0,0.08);
 color:#000000 !important;
+font-size:18px;
 }
 
 .price-card b{
@@ -52,6 +54,7 @@ color:#FF4B4B;
 font-weight:bold;
 }
 
+/* กล่องติดต่อ */
 .contact-section{
 background:#ffffff;
 padding:30px;
@@ -59,6 +62,16 @@ border-radius:15px;
 text-align:center;
 box-shadow:0px 4px 15px rgba(0,0,0,0.1);
 border:1px solid #eeeeee;
+color:#000000 !important;
+}
+
+.contact-section p{
+color:#000000 !important;
+font-size:18px;
+}
+
+.contact-section h3{
+color:#FF4B4B !important;
 }
 
 </style>
@@ -71,7 +84,6 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def get_data(sheet):
 
     try:
-
         df = conn.read(worksheet=sheet, ttl=0)
 
         if df is None or df.empty:
@@ -202,7 +214,7 @@ if st.session_state.page=="Home":
     st.markdown(f"""
     <div class="contact-section">
 
-    <h3 style="color:#FF4B4B;">📞 ติดต่อเรา</h3>
+    <h3>📞 ติดต่อเรา</h3>
 
     <p>📱 081-222-2222</p>
     <p>💬 LINE : @222salon</p>
@@ -219,110 +231,26 @@ if st.session_state.page=="Home":
 # ---------------- VIEW QUEUE ----------------
 elif st.session_state.page=="ViewQueues":
 
-    st.subheader("📅 รายการคิววันนี้ (Real-time)")
-
-    placeholder=st.empty()
+    st.subheader("📅 รายการคิววันนี้")
 
     df=get_data("Bookings")
 
     today=datetime.now().strftime("%Y-%m-%d")
 
-    with placeholder.container():
+    if not df.empty:
 
-        if not df.empty:
+        active=df[(df['date']==today)&(df['status']=="รอรับบริการ")]
 
-            active=df[(df['date']==today)&(df['status']=="รอรับบริการ")]
+        if not active.empty:
 
-            if not active.empty:
+            st.write(f"🔔 มี {len(active)} คิว")
 
-                st.write(f"🔔 มี {len(active)} คิว")
-
-                st.table(active[['time','service','fullname']].sort_values("time"))
-
-            else:
-
-                st.info("ยังไม่มีคิววันนี้")
+            st.table(active[['time','service','fullname']].sort_values("time"))
 
         else:
 
-            st.info("ไม่มีข้อมูลการจอง")
+            st.info("ยังไม่มีคิววันนี้")
 
-    time.sleep(30)
-    st.rerun()
+    else:
 
-# ---------------- REGISTER ----------------
-elif st.session_state.page=="Register":
-
-    st.subheader("สมัครสมาชิก")
-
-    with st.form("reg"):
-
-        name=st.text_input("ชื่อ")
-
-        phone=st.text_input("เบอร์")
-
-        pw=st.text_input("รหัสผ่าน",type="password")
-
-        pw2=st.text_input("ยืนยันรหัสผ่าน",type="password")
-
-        if st.form_submit_button("สมัคร"):
-
-            if pw!=pw2:
-
-                st.error("รหัสผ่านไม่ตรงกัน")
-
-            else:
-
-                df=get_data("Users")
-
-                new=pd.DataFrame([{
-                "phone":phone,
-                "password":pw,
-                "fullname":name,
-                "role":"user"
-                }])
-
-                conn.update(
-                worksheet="Users",
-                data=pd.concat([df,new],ignore_index=True)
-                )
-
-                st.success("สมัครสำเร็จ")
-                navigate("Login")
-
-# ---------------- LOGIN ----------------
-elif st.session_state.page=="Login":
-
-    st.subheader("เข้าสู่ระบบ")
-
-    u=st.text_input("เบอร์")
-
-    p=st.text_input("รหัสผ่าน",type="password")
-
-    if st.button("เข้าสู่ระบบ"):
-
-        if u=="admin222" and p=="222":
-
-            st.session_state.logged_in=True
-            st.session_state.user_role="admin"
-
-            navigate("Admin")
-
-        else:
-
-            df=get_data("Users")
-
-            user=df[(df['phone']==u)&(df['password']==p)]
-
-            if not user.empty:
-
-                st.session_state.logged_in=True
-                st.session_state.user_role="user"
-                st.session_state.username=u
-                st.session_state.fullname=user.iloc[0]['fullname']
-
-                navigate("Booking")
-
-            else:
-
-                st.error("ข้อมูลไม่ถูกต้อง")
+        st.info("ไม่มีข้อมูลการจอง")
