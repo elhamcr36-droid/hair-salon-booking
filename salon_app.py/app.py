@@ -41,7 +41,6 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- 2. DATA ENGINE ---
 def get_data(sheet_name):
-    # ใช้ ttl=0 เพื่อให้ดึงข้อมูลสดใหม่เสมอเมื่อมีการเรียก
     try:
         df = conn.read(worksheet=sheet_name, ttl=0)
         if df is None or df.empty: return pd.DataFrame()
