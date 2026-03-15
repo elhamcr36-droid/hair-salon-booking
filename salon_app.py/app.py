@@ -260,4 +260,4 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                                 df_msg_admin.at[idx, 'admin_reply'] = ans
                                 conn.update(worksheet="Messages", data=df_msg_admin); st.rerun()
                 if m['admin_reply']:
-                    st.chat_message("assistant").info(m['admin_reply']) ตอนเเรกหน้าจัดการคอวจะมีเเก้ไขราคาค่าบริการเพื่อไปสรุปยอด มียกเลิกคิวด้วย
+                    st.chat_message("assistant").info(m['admin_reply']) 
