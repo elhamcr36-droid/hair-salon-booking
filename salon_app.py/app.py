@@ -237,8 +237,12 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                         conn.update(worksheet="Bookings", data=df_admin); st.rerun()
     with at3:
         df_msg_admin = get_data("Messages")
-        # แจ้งเตือนข้อความใหม่ใน Tab แชท
-        new_count = len(df_msg_admin[df_msg_admin['admin_reply'] == ""])
+
+# ป้องกัน KeyError
+if 'admin_reply' not in df_msg_admin.columns:
+    df_msg_admin['admin_reply'] = ""
+
+new_count = len(df_msg_admin[df_msg_admin['admin_reply'] == ""])
         if new_count > 0:
             st.error(f"🔔 คุณมี {new_count} ข้อความที่ยังไม่ได้ตอบ!")
             
