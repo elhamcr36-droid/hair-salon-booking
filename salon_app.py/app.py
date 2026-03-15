@@ -20,12 +20,8 @@ st.markdown("""
         }
         .price-text { float: right; color: #FF4B4B; font-weight: bold; }
         .contact-section { 
-            background-color: #ffffff; 
-            padding: 30px; 
-            border-radius: 15px; 
-            text-align: center; 
-            box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
-            border: 1px solid #eeeeee;
+            background-color: #ffffff; padding: 30px; border-radius: 15px; text-align: center; 
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.1); border: 1px solid #eeeeee;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -33,8 +29,9 @@ st.markdown("""
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data(sheet_name):
+    # ล้าง Cache ทุกครั้งที่เรียกข้อมูล เพื่อให้ได้สถานะล่าสุดจริงๆ จาก Google Sheets
+    st.cache_data.clear() 
     try:
-        # ใช้ ttl=0 เพื่อบังคับดึงข้อมูลสดใหม่ที่สุดจาก Google Sheets
         df = conn.read(worksheet=sheet_name, ttl=0)
         if df is None or df.empty: return pd.DataFrame()
         df = df.dropna(how='all')
@@ -102,29 +99,10 @@ if st.session_state.page == "Home":
         target = p1 if i % 2 == 0 else p2
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
 
-    st.divider()
-    map_link = "http://google.com" 
-    st.markdown(f"""
-        <div class="contact-section">
-            <h3 style="color: #FF4B4B; margin-top: 0;">📞 ติดต่อเรา</h3>
-            <div style="color: #222222; font-size: 1.1em; padding: 10px 0;">
-                <span style="margin: 0 15px;"><b>📱 เบอร์โทร:</b> 081-222-2222</span>
-                <span style="margin: 0 15px;"><b>💬 LINE ID:</b> @222salon</span>
-                <span style="margin: 0 15px;"><b>🔵 Facebook:</b> 222 Salon</span>
-            </div>
-            <div style="margin-top: 20px;">
-                <a href="{map_link}" target="_blank" style="background-color: #FF4B4B; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: bold; box-shadow: 0px 4px 10px rgba(255, 75, 75, 0.3);">
-                    📍 พิกัด: 222 ถนน เทศบาล 1 (คลิกเพื่อดูแผนที่)
-                </a>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิววันนี้ (Real-time)")
     df_today = get_data("Bookings")
     today_str = datetime.now().strftime("%Y-%m-%d")
-    
     if not df_today.empty:
         active = df_today[(df_today['date'] == today_str) & (df_today['status'] == "รอรับบริการ")]
         if not active.empty:
@@ -134,9 +112,6 @@ elif st.session_state.page == "ViewQueues":
             st.info(f"✨ ยังไม่มีการจองในวันนี้ ({today_str})")
     else:
         st.info("📅 ยังไม่มีข้อมูลการจอง")
-    
-    time.sleep(30)
-    st.rerun()
 
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
@@ -144,18 +119,14 @@ elif st.session_state.page == "Register":
         nf = st.text_input("ชื่อ-นามสกุล")
         nu = st.text_input("เบอร์โทรศัพท์")
         np = st.text_input("รหัสผ่าน", type="password")
-        npc = st.text_input("ยืนยันรหัสผ่าน", type="password")
         if st.form_submit_button("ลงทะเบียน"):
-            if nu and np == npc and nf:
-                df_u = get_data("Users")
-                if not df_u.empty and nu in df_u['phone'].values:
-                    st.error("❌ เบอร์นี้ถูกใช้งานแล้ว")
-                else:
-                    new_u = pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])
-                    conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
-                    st.success("✅ สำเร็จ!"); navigate("Login")
+            df_u = get_data("Users")
+            if not df_u.empty and nu in df_u['phone'].values:
+                st.error("❌ เบอร์นี้ถูกใช้งานแล้ว")
             else:
-                st.error("❌ ข้อมูลไม่ถูกต้อง")
+                new_u = pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])
+                conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
+                st.success("✅ สำเร็จ!"); navigate("Login")
 
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
@@ -187,21 +158,21 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
                 if b_d.weekday() == 5: 
                     st.error("❌ ร้านหยุดทุกวันเสาร์")
                 else:
-                    # ดึงข้อมูลล่าสุดมาเช็คก่อนบันทึก
+                    # ดึงข้อมูลล่าสุดมาเช็ค
                     df_all = get_data("Bookings")
                     
-                    # Logic: ค้นหาว่า วัน/เวลา นี้ มีคนจองไว้แล้วและสถานะยังเป็น "รอรับบริการ" หรือไม่
+                    # LOGIC ป้องกันจองซ้ำ: เช็ค วัน+เวลา ที่มีสถานะ "รอรับบริการ" อยู่แล้ว
                     is_taken = False
                     if not df_all.empty:
-                        # เช็คเฉพาะคิวที่ยังไม่เสร็จและไม่โดนยกเลิก
-                        match = df_all[(df_all['date'] == str(b_d)) & 
-                                       (df_all['time'] == b_t) & 
-                                       (df_all['status'] == "รอรับบริการ")]
+                        # กรองเฉพาะคิวที่ยังไม่จบงาน
+                        active = df_all[df_all['status'] == "รอรับบริการ"]
+                        # เช็คว่าวันและเวลานั้นถูกจองไปหรือยัง
+                        match = active[(active['date'] == str(b_d)) & (active['time'] == b_t)]
                         if not match.empty:
                             is_taken = True
 
                     if is_taken:
-                        st.error(f"❌ ขออภัย! วันที่ {b_d} เวลา {b_t} มีคนจองแล้ว")
+                        st.error(f"❌ ขออภัย! วันที่ {b_d} เวลา {b_t} มีผู้จองแล้วครับ")
                     else:
                         new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
                         conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
@@ -224,6 +195,7 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
                             st.write(f"📅 {r['date']} | ⏰ {r['time']} | {r['service']}")
                             st.markdown(f"**สถานะ: {r['status']}**")
                         with c2:
+                            # ปุ่มยกเลิกสำหรับลูกค้า
                             if r['status'] == "รอรับบริการ":
                                 if st.button("❌ ยกเลิก", key=f"u_can_{r['id']}"):
                                     df_history.loc[df_history['id'] == r['id'], 'status'] = "ยกเลิกโดยลูกค้า"
@@ -270,6 +242,7 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                             st.write(f"👤 **{row['fullname']}**")
                             st.write(f"📅 {row['date']} | ⏰ {row['time']} | {row['service']}")
                         with c2:
+                            # ช่องใส่ราคาตอนปิดงาน
                             p_input = st.number_input(f"ราคา (บ.)", min_value=0, step=50, key=f"p_{row['id']}")
                             if st.button("✅ เสร็จสิ้น", key=f"d_{row['id']}", type="primary"):
                                 if p_input > 0:
@@ -278,7 +251,7 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                                     st.rerun()
                                 else: st.warning("กรุณาใส่ราคา")
                         with c3:
-                            st.write(" ")
+                            # ปุ่มยกเลิกสำหรับร้าน
                             if st.button("❌ ยกเลิก", key=f"a_can_{row['id']}"):
                                 df_admin.loc[df_admin['id'] == row['id'], 'status'] = "ยกเลิกโดยร้าน"
                                 conn.update(worksheet="Bookings", data=df_admin)
