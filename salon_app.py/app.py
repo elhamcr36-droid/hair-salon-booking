@@ -32,39 +32,30 @@ st.markdown("""
         .contact-section-black h3, .contact-section-black p { color: #000000 !important; margin: 8px 0; }
         .map-link { color: #0000EE !important; text-decoration: underline; font-weight: bold; cursor: pointer; }
 
-        /* ---------------------------------------------------- */
-        /* --- Chat สไตล์ Messenger --- */
-        /* ---------------------------------------------------- */
-        
-        /* ข้อความของผู้ส่ง (User - ฝั่งขวา สีฟ้า) */
+        /* --- Chat สไตล์ Messenger (แยกซ้าย-ขวา) --- */
+        /* ข้อความที่เราส่งเอง (User ฝั่งลูกค้า / Admin ฝั่งแอดมิน) -> สีฟ้าอยู่ขวา */
         [data-testid="stChatMessage"][data-testid^="stChatMessageUser"] {
             flex-direction: row-reverse !important;
-            text-align: right !important;
             background-color: #0084FF !important;
             color: white !important;
             border-radius: 15px 15px 2px 15px !important;
             margin-left: auto !important;
             width: fit-content !important;
-            max-width: 80% !important;
-            padding: 10px !important;
+            max-width: 85% !important;
         }
 
-        /* ข้อความของผู้รับ (Admin/Assistant - ฝั่งซ้าย สีเทา) */
+        /* ข้อความที่ได้รับ (อีกฝ่ายตอบกลับ) -> สีเทาอยู่ซ้าย */
         [data-testid="stChatMessage"][data-testid^="stChatMessageAssistant"] {
             background-color: #E4E6EB !important;
             color: black !important;
             border-radius: 15px 15px 15px 2px !important;
             margin-right: auto !important;
             width: fit-content !important;
-            max-width: 80% !important;
-            padding: 10px !important;
+            max-width: 85% !important;
         }
-
-        /* ปรับสีตัวอักษรข้างในให้ชัดเจน */
-        [data-testid="stChatMessage"] p { color: inherit !important; margin-bottom: 0px !important; }
         
-        /* ซ่อนขอบและเงาเดิมของ Streamlit Chat */
-        [data-testid="stChatMessage"] { border: none !important; }
+        [data-testid="stChatMessage"] p { color: inherit !important; font-size: 16px; }
+        [data-testid="stChatMessage"] { border: none !important; padding: 10px !important; margin-bottom: 5px !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -82,7 +73,7 @@ def get_data(sheet_name):
             if 'phone' in col or 'username' in col:
                 df[col] = df[col].apply(lambda x: '0' + x if len(x) == 9 and x.isdigit() else x)
         return df
-    except:
+    except Exception as e:
         return pd.DataFrame()
 
 # --- 2. NAVIGATION ---
@@ -134,16 +125,16 @@ if st.session_state.page == "Home":
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
 
     st.divider()
-    address = "222 ถนนเทศบาล 1 ตำบลบ่อยาง อำเภอเมืองสงขลา สงขลา 90000"
-    google_maps_url = f"https://www.google.com/maps/search/?api=1&query={address.replace(' ', '+')}"
+    address_str = "222 ถนนเทศบาล 1 ตำบลบ่อยาง อำเภอเมืองสงขลา สงขลา 90000"
+    google_maps_url = f"https://www.google.com/maps/search/?api=1&query={address_str.replace(' ', '+')}"
     
     st.markdown(f"""
         <div class="contact-section-black">
             <h3>📞 ติดต่อเรา & พิกัดร้าน</h3>
             <p>📱 <b>เบอร์โทรศัพท์:</b> 081-222-2222</p>
             <p>💬 <b>LINE ID:</b> @222salon</p>
-            <p>📍 <b>พิกัด:</b> <a class="map-link" href="{google_maps_url}" target="_blank">{address}</a></p>
-            <p style="font-size: 0.85em; color: #555555 !important;">(คลิกที่พิกัดด้านบนเพื่อเปิด GPS นำทาง | จอดรถได้ที่หน้าร้านครับ)</p>
+            <p>📍 <b>พิกัด:</b> <a class="map-link" href="{google_maps_url}" target="_blank">{address_str}</a></p>
+            <p style="font-size: 0.85em; color: #555555 !important;">(คลิกที่พิกัดด้านบนเพื่อเปิด GPS นำทาง)</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -191,7 +182,7 @@ elif st.session_state.page == "Login":
                 navigate("Booking")
             else: st.error("❌ เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง")
 
-# 5. หน้าจองคิว / แชท (สำหรับลูกค้า)
+# 5. หน้าลูกค้า (จองคิว/ประวัติ/แชท)
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิวของฉัน", "💬 แชทสอบถาม"])
     
@@ -229,21 +220,28 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
 
     with t3:
         st.subheader("💬 พูดคุยกับร้าน")
-        chat_box = st.container(height=400)
+        chat_container = st.container(height=450)
         df_c = get_data("Chats")
         
-        with chat_box:
+        with chat_container:
             if not df_c.empty:
-                my_m = df_c[df_c['username'] == st.session_state.username]
-                for _, m in my_m.iterrows():
+                my_messages = df_c[df_c['username'] == st.session_state.username]
+                for _, m in my_messages.iterrows():
+                    # ถ้าคนส่งคือ user ให้ขึ้นฝั่งขวา (User Style)
                     if m['sender'] == "user":
                         with st.chat_message("user"): st.markdown(m["msg"])
+                    # ถ้าคนส่งคือแอดมิน ให้ขึ้นฝั่งซ้าย (Assistant Style)
                     else:
                         with st.chat_message("assistant"): st.markdown(m["msg"])
 
-        if prompt := st.chat_input("พิมพ์ข้อความ..."):
-            new_m = pd.DataFrame([{"username": st.session_state.username, "sender": "user", "msg": prompt, "time": datetime.now().strftime("%H:%M")}])
-            conn.update(worksheet="Chats", data=pd.concat([df_c, new_m], ignore_index=True))
+        if prompt := st.chat_input("พิมพ์ข้อความของคุณ..."):
+            new_msg = pd.DataFrame([{
+                "username": st.session_state.username, 
+                "sender": "user", 
+                "msg": prompt, 
+                "time": datetime.now().strftime("%H:%M")
+            }])
+            conn.update(worksheet="Chats", data=pd.concat([df_c, new_msg], ignore_index=True))
             st.rerun()
 
 # 6. หน้าแอดมิน
@@ -266,23 +264,41 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                     conn.update(worksheet="Bookings", data=df_adm); st.rerun()
                     
     with at3:
-        st.subheader("📩 แชทสอบถามจากลูกค้า")
+        st.subheader("📩 ข้อความจากลูกค้า")
         df_ch = get_data("Chats")
+        df_users = get_data("Users")
+        
         if not df_ch.empty:
-            for u in df_ch['username'].unique():
-                with st.expander(f"👤 แชทจากคุณ: {u}", expanded=True):
-                    inner_chat = st.container(height=300)
-                    user_msgs = df_ch[df_ch['username'] == u]
-                    with inner_chat:
-                        for _, m in user_msgs.iterrows():
+            # สร้าง Dictionary เพื่อเปลี่ยนเบอร์โทรเป็นชื่อจริง
+            name_map = dict(zip(df_users['phone'], df_users['fullname']))
+            
+            for u_phone in df_ch['username'].unique():
+                # ดึงชื่อจริง ถ้าไม่เจอให้โชว์เบอร์โทรแทน
+                display_name = name_map.get(u_phone, u_phone)
+                
+                with st.expander(f"👤 แชทจากคุณ: {display_name} ({u_phone})", expanded=True):
+                    admin_chat_box = st.container(height=300)
+                    msgs_from_user = df_ch[df_ch['username'] == u_phone]
+                    
+                    with admin_chat_box:
+                        for _, m in msgs_from_user.iterrows():
+                            # ในหน้าจอแอดมิน ข้อความลูกค้าให้ขึ้นฝั่งซ้าย (Assistant)
                             if m['sender'] == "user":
                                 with st.chat_message("assistant"): st.markdown(m["msg"])
+                            # ข้อความที่แอดมินตอบ ให้ขึ้นฝั่งขวา (User)
                             else:
                                 with st.chat_message("user"): st.markdown(m["msg"])
                     
-                    with st.form(f"rep_{u}", clear_on_submit=True):
-                        reply = st.text_input("ตอบกลับ...")
-                        if st.form_submit_button("ส่ง") and reply:
-                            new_r = pd.DataFrame([{"username": u, "sender": "admin", "msg": reply, "time": datetime.now().strftime("%H:%M")}])
-                            conn.update(worksheet="Chats", data=pd.concat([df_ch, new_r], ignore_index=True))
+                    with st.form(f"rep_form_{u_phone}", clear_on_submit=True):
+                        reply_text = st.text_input("พิมพ์ตอบกลับ...")
+                        if st.form_submit_button("ส่ง") and reply_text:
+                            new_reply = pd.DataFrame([{
+                                "username": u_phone, 
+                                "sender": "admin", 
+                                "msg": reply_text, 
+                                "time": datetime.now().strftime("%H:%M")
+                            }])
+                            conn.update(worksheet="Chats", data=pd.concat([df_ch, new_reply], ignore_index=True))
                             st.rerun()
+        else:
+            st.info("ยังไม่มีแชทใหม่")
