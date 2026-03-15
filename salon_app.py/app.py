@@ -34,6 +34,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data(sheet_name):
     try:
+        # ใช้ ttl=0 เพื่อบังคับดึงข้อมูลสดใหม่ที่สุดจาก Google Sheets
         df = conn.read(worksheet=sheet_name, ttl=0)
         if df is None or df.empty: return pd.DataFrame()
         df = df.dropna(how='all')
@@ -102,7 +103,7 @@ if st.session_state.page == "Home":
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
 
     st.divider()
-    map_link = "http://google.com" # ใส่ลิงก์แผนที่ของคุณ
+    map_link = "http://google.com" 
     st.markdown(f"""
         <div class="contact-section">
             <h3 style="color: #FF4B4B; margin-top: 0;">📞 ติดต่อเรา</h3>
@@ -184,26 +185,29 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
             
             if st.form_submit_button("ยืนยันการจอง"):
                 if b_d.weekday() == 5: 
-                    st.error("❌ ร้านหยุดทุกวันเสาร์ กรุณาเลือกวันอื่น")
+                    st.error("❌ ร้านหยุดทุกวันเสาร์")
                 else:
+                    # ดึงข้อมูลล่าสุดมาเช็คก่อนบันทึก
                     df_all = get_data("Bookings")
-                    # --- LOGIC ป้องกันการจองซ้ำ ---
-                    is_duplicate = False
+                    
+                    # Logic: ค้นหาว่า วัน/เวลา นี้ มีคนจองไว้แล้วและสถานะยังเป็น "รอรับบริการ" หรือไม่
+                    is_taken = False
                     if not df_all.empty:
-                        # เช็คว่า วัน และ เวลา นี้ มีคนจองที่สถานะ "รอรับบริการ" หรือยัง
-                        check = df_all[(df_all['date'] == str(b_d)) & 
+                        # เช็คเฉพาะคิวที่ยังไม่เสร็จและไม่โดนยกเลิก
+                        match = df_all[(df_all['date'] == str(b_d)) & 
                                        (df_all['time'] == b_t) & 
                                        (df_all['status'] == "รอรับบริการ")]
-                        if not check.empty:
-                            is_duplicate = True
+                        if not match.empty:
+                            is_taken = True
 
-                    if is_duplicate:
-                        st.error(f"❌ ขออภัย! วันที่ {b_d} เวลา {b_t} มีผู้จองแล้ว กรุณาเลือกเวลาอื่น")
+                    if is_taken:
+                        st.error(f"❌ ขออภัย! วันที่ {b_d} เวลา {b_t} มีคนจองแล้ว")
                     else:
                         new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
                         conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
-                        st.success("✅ จองสำเร็จ!"); st.balloons()
-                        time.sleep(1)
+                        st.success("✅ จองสำเร็จ!")
+                        st.balloons()
+                        time.sleep(1.5)
                         st.rerun()
     
     with t2:
