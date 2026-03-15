@@ -6,7 +6,7 @@ import uuid
 import time
 
 # --- 1. CONFIG & STYLING ---
-st.set_page_config(page_title="222-Salon Songkhla", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="222-Salon-Total-Fixed", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -19,21 +19,13 @@ st.markdown("""
             box-shadow: 2px 4px 12px rgba(0,0,0,0.08); color: #000000 !important;
         }
         .price-text { float: right; color: #FF4B4B; font-weight: bold; }
-        
-        /* สไตล์ข้อมูลติดต่อสีดำ และ ลิงก์ GPS */
         .contact-section-black { 
             background-color: #ffffff; padding: 30px; border-radius: 15px; text-align: center; 
             box-shadow: 0px 4px 15px rgba(0,0,0,0.1); border: 1px solid #eeeeee;
             color: #000000 !important;
         }
-        .contact-section-black h3, .contact-section-black p { color: #000000 !important; margin: 8px 0; }
-        .map-link { 
-            color: #0000EE !important; 
-            text-decoration: underline; 
-            font-weight: bold; 
-            cursor: pointer;
-        }
-        
+        .contact-section-black h3, .contact-section-black p { color: #000000 !important; }
+        .map-link { color: #0000EE !important; text-decoration: underline; font-weight: bold; }
         .chat-msg { padding: 12px; border-radius: 15px; margin-bottom: 10px; max-width: 85%; }
         .user-msg { background-color: #E3F2FD; margin-left: auto; text-align: right; color: #000; }
         .admin-msg { background-color: #F5F5F5; margin-right: auto; text-align: left; color: #000; }
@@ -43,16 +35,16 @@ st.markdown("""
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data(sheet_name):
+    # ใช้ ttl=0 เพื่อให้อ่านข้อมูลสดใหม่จาก Google Sheets เสมอ
     st.cache_data.clear() 
     try:
         df = conn.read(worksheet=sheet_name, ttl=0)
         if df is None or df.empty: return pd.DataFrame()
         df = df.dropna(how='all')
+        # ปรับชื่อคอลัมน์ให้เป็นตัวเล็กและไม่มีช่องว่างเพื่อความแม่นยำ
         df.columns = [str(c).strip().lower() for c in df.columns]
         for col in df.columns:
             df[col] = df[col].astype(str).str.strip().replace(r'\.0$', '', regex=True).replace('nan', '')
-            if 'phone' in col or 'username' in col:
-                df[col] = df[col].apply(lambda x: '0' + x if len(x) == 9 and x.isdigit() else x)
         return df
     except:
         return pd.DataFrame()
@@ -78,8 +70,7 @@ if not st.session_state.logged_in:
     with m_cols[4]: 
         if st.button("🔑 เข้าสู่ระบบ"): navigate("Login")
 else:
-    role = st.session_state.get('user_role')
-    if role == 'admin':
+    if st.session_state.get('user_role') == 'admin':
         with m_cols[2]:
             if st.button("📊 จัดการร้าน"): navigate("Admin")
     else:
@@ -93,34 +84,31 @@ st.divider()
 
 # --- 3. PAGE LOGIC ---
 
-# 1. หน้าแรก (พร้อมข้อมูลติดต่อสีดำ และ ลิงก์ GPS)
+# หน้าแรก (Home)
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (⚠️ หยุดทุกวันเสาร์)")
-    
     st.subheader("📋 บริการและราคา")
     services = {"✂️ ตัดผมชาย": "150-350 บ.", "💇‍♀️ ตัดผมหญิง": "350-800 บ.", "🚿 สระ-ไดร์": "200-450 บ.", "🎨 ทำสีผม": "1,500 บ.+", "✨ ยืด/ดัด": "1,000 บ.+", "🌿 ทรีทเม้นท์": "500 บ.+"}
     p1, p2 = st.columns(2)
     for i, (name, price) in enumerate(services.items()):
         target = p1 if i % 2 == 0 else p2
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
-
-    st.divider()
-    # ลิงก์ Google Maps ไปยังพิกัดที่แจ้ง
-    # (หมายเหตุ: ใช้ Search Query เพื่อความแม่นยำในการนำทางไปยังบ้านเลขที่)
-    google_maps_url = "https://www.google.com/maps/search/?api=1&query=222+ถนนเทศบาล+1+ตำบลบ่อยาง+อำเภอเมืองสงขลา+สงขลา+90000"
     
+    st.divider()
+    # GPS Link สำหรับพิกัด ต.บ่อยาง จ.สงขลา
+    google_maps_url = "https://www.google.com/maps/search/?api=1&query=222+ถนนเทศบาล+1+ตำบลบ่อยาง+อำเภอเมืองสงขลา+สงขลา+90000"
     st.markdown(f"""
         <div class="contact-section-black">
             <h3>📞 ติดต่อเรา & พิกัดร้าน</h3>
             <p>📱 <b>เบอร์โทรศัพท์:</b> 081-222-2222</p>
             <p>💬 <b>LINE ID:</b> @222salon</p>
             <p>📍 <b>พิกัด:</b> <a class="map-link" href="{google_maps_url}" target="_blank">222 ถนนเทศบาล 1 ตำบลบ่อยาง อำเภอเมืองสงขลา สงขลา 90000</a></p>
-            <p style="font-size: 0.85em; color: #555555 !important;">(คลิกที่พิกัดด้านบนเพื่อเปิด GPS นำทาง | จอดรถได้ที่หน้าร้านครับ)</p>
+            <p style="font-size: 0.85em; color: #555 !important;">(คลิกพิกัดด้านบนเพื่อเปิด GPS | จอดรถได้ที่หน้าร้านครับ)</p>
         </div>
     """, unsafe_allow_html=True)
 
-# 2. หน้าดูคิวรวม
+# หน้าดูคิวรวม
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิววันนี้")
     df_q = get_data("Bookings")
@@ -132,7 +120,7 @@ elif st.session_state.page == "ViewQueues":
         else: st.info("ยังไม่มีคิวจองในวันนี้")
     else: st.info("ไม่มีข้อมูล")
 
-# 3. หน้าสมัครสมาชิก
+# หน้าสมัครสมาชิก
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิก")
     with st.form("reg"):
@@ -145,9 +133,9 @@ elif st.session_state.page == "Register":
             else:
                 new_u = pd.DataFrame([{"phone": nu, "password": np, "fullname": nf, "role": "user"}])
                 conn.update(worksheet="Users", data=pd.concat([df_u, new_u], ignore_index=True))
-                st.success("✅ สมัครสำเร็จ!"); time.sleep(1); navigate("Login")
+                st.success("✅ สำเร็จ!"); time.sleep(1); navigate("Login")
 
-# 4. หน้าเข้าสู่ระบบ
+# หน้า Login
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
     u_in = st.text_input("เบอร์โทรศัพท์")
@@ -164,60 +152,62 @@ elif st.session_state.page == "Login":
                 navigate("Booking")
             else: st.error("❌ เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง")
 
-# 5. หน้าจองคิว / ประวัติ / แชท (สำหรับลูกค้า)
+# หน้าลูกค้า (จอง/ประวัติ/แชท)
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
-    t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิวของฉัน", "💬 แชทสอบถาม"])
-    
+    t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิว", "💬 แชทสอบถาม"])
     with t1:
         with st.form("b_form"):
-            b_d = st.date_input("วันที่", min_value=datetime.now().date())
-            b_t = st.selectbox("เวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"])
+            b_d = st.date_input("เลือกวันที่", min_value=datetime.now().date())
+            b_t = st.selectbox("เลือกเวลา", ["09:30", "10:30", "11:30", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"])
             b_s = st.selectbox("บริการ", ["ตัดผมชาย", "ตัดผมหญิง", "สระ-ไดร์", "ทำสีผม", "ยืด/ดัด", "ทรีทเม้นท์"])
-            if st.form_submit_button("ยืนยันการจอง"):
+            if st.form_submit_button("ยืนยัน"):
                 df_all = get_data("Bookings")
+                # ตรวจสอบการจองซ้ำ
                 active = df_all[(df_all['username'] == st.session_state.username) & (df_all['status'] == "รอรับบริการ")]
-                user_today = df_all[(df_all['username'] == st.session_state.username) & (df_all['date'] == str(b_d)) & (df_all['status'] == "เสร็จสิ้น")]
                 slot_full = df_all[(df_all['date'] == str(b_d)) & (df_all['time'] == b_t) & (df_all['status'] == "รอรับบริการ")]
-
                 if b_d.weekday() == 5: st.error("❌ ร้านหยุดวันเสาร์")
-                elif not active.empty: st.warning("⚠️ ยกเลิกคิวเดิมก่อนถึงจะจองใหม่ได้")
-                elif not user_today.empty: st.warning("❌ จองได้วันละ 1 ครั้งเท่านั้น")
-                elif len(slot_full) >= 2: st.error("❌ เวลานี้เต็มแล้ว (จำกัด 2 ท่าน)")
+                elif not active.empty: st.warning("⚠️ ยกเลิกคิวเก่าก่อนจองใหม่")
+                elif len(slot_full) >= 2: st.error("❌ เวลานี้เต็มแล้ว (จำกัด 2 ท่านต่อรอบ)")
                 else:
                     new_q = pd.DataFrame([{"id": str(uuid.uuid4())[:8], "username": st.session_state.username, "fullname": st.session_state.fullname, "date": str(b_d), "time": b_t, "service": b_s, "status": "รอรับบริการ", "price": "0"}])
                     conn.update(worksheet="Bookings", data=pd.concat([df_all, new_q], ignore_index=True))
                     st.success("✅ จองสำเร็จ!"); st.balloons(); time.sleep(1); st.rerun()
-
     with t2:
         df_h = get_data("Bookings")
         if not df_h.empty:
-            my_qs = df_h[df_h['username'] == st.session_state.username].iloc[::-1]
-            for _, r in my_qs.iterrows():
+            my = df_h[df_h['username'] == st.session_state.username].iloc[::-1]
+            for _, r in my.iterrows():
                 with st.container(border=True):
                     c1, c2 = st.columns([3, 1])
                     c1.write(f"📅 {r['date']} | ⏰ {r['time']} | {r['service']} \n **สถานะ: {r['status']}**")
                     if r['status'] == "รอรับบริการ" and c2.button("❌ ยกเลิก", key=r['id']):
                         df_h.loc[df_h['id'] == r['id'], 'status'] = "ยกเลิกโดยลูกค้า"
                         conn.update(worksheet="Bookings", data=df_h); st.rerun()
-
     with t3:
-        st.subheader("💬 พูดคุยกับร้าน")
-        df_c = get_data("Chats")
+        st.subheader("💬 แชทสอบถาม")
+        # เปลี่ยนเป็นแผ่นงาน "Messages" ตาม Google Sheets จริง
+        df_msg = get_data("Messages") 
         box = st.container(height=300)
-        if not df_c.empty:
-            my_m = df_c[df_c['username'] == st.session_state.username]
+        if not df_msg.empty:
+            my_m = df_msg[df_msg['username'] == st.session_state.username]
             for _, m in my_m.iterrows():
-                cls = "user-msg" if m['sender'] == "user" else "admin-msg"
-                box.markdown(f'<div class="chat-msg {cls}">{m["msg"]}</div>', unsafe_allow_html=True)
+                box.markdown(f'<div class="chat-msg user-msg">{m["message"]}</div>', unsafe_allow_html=True)
+                if m.get("admin_reply"):
+                    box.markdown(f'<div class="chat-msg admin-msg">{m["admin_reply"]}</div>', unsafe_allow_html=True)
         with st.form("chat_f", clear_on_submit=True):
             txt = st.text_input("พิมพ์ข้อความ...")
             if st.form_submit_button("ส่ง") and txt:
-                new_m = pd.DataFrame([{"username": st.session_state.username, "sender": "user", "msg": txt, "time": datetime.now().strftime("%H:%M")}])
-                conn.update(worksheet="Chats", data=pd.concat([df_c, new_m], ignore_index=True)); st.rerun()
+                # บันทึกตามโครงสร้างหัวตารางในรูปภาพของคุณ
+                new_m = pd.DataFrame([{
+                    "id": str(uuid.uuid4())[:8], "username": st.session_state.username, 
+                    "message": txt, "timestamp": datetime.now().strftime("%H:%M"), "admin_reply": ""
+                }])
+                conn.update(worksheet="Messages", data=pd.concat([df_msg, new_m], ignore_index=True))
+                st.rerun()
 
-# 6. หน้าแอดมิน
+# หน้าแอดมิน
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
-    at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 แชทลูกค้า"])
+    at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 ตอบแชท"])
     with at2:
         df_adm = get_data("Bookings")
         active = df_adm[df_adm['status'] == "รอรับบริการ"] if not df_adm.empty else pd.DataFrame()
@@ -233,15 +223,15 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                     df_adm.loc[df_adm['id'] == r['id'], 'status'] = "ยกเลิกโดยร้าน"
                     conn.update(worksheet="Bookings", data=df_adm); st.rerun()
     with at3:
-        df_ch = get_data("Chats")
+        st.subheader("📩 ตอบแชทลูกค้า")
+        df_ch = get_data("Messages")
         if not df_ch.empty:
-            for u in df_ch['username'].unique():
-                with st.expander(f"แชทจากคุณ: {u}"):
-                    for _, m in df_ch[df_ch['username'] == u].iterrows():
-                        style = "user-msg" if m['sender'] == "user" else "admin-msg"
-                        st.markdown(f'<div class="chat-msg {style}">{m["msg"]}</div>', unsafe_allow_html=True)
-                    with st.form(f"rep_{u}"):
-                        reply = st.text_input("ตอบกลับ...")
-                        if st.form_submit_button("ส่ง"):
-                            new_r = pd.DataFrame([{"username": u, "sender": "admin", "msg": reply, "time": datetime.now().strftime("%H:%M")}])
-                            conn.update(worksheet="Chats", data=pd.concat([df_ch, new_r], ignore_index=True)); st.rerun()
+            for idx, m in df_ch.iterrows():
+                if not m['admin_reply']:
+                    with st.expander(f"จากคุณ: {m['username']}"):
+                        st.write(f"💬: {m['message']}")
+                        with st.form(key=f"rep_{m['id']}"):
+                            ans = st.text_input("พิมพ์ตอบกลับ...")
+                            if st.form_submit_button("ส่งคำตอบ"):
+                                df_ch.at[idx, 'admin_reply'] = ans
+                                conn.update(worksheet="Messages", data=df_ch); st.rerun()
