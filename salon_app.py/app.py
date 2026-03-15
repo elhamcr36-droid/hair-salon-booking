@@ -10,9 +10,12 @@ st.set_page_config(page_title="222-Salon Songkhla", layout="wide", initial_sideb
 
 st.markdown("""
     <style>
+        /* UI พื้นฐาน */
         [data-testid="stSidebar"] {display: none;}
         .main-header {text-align: center; color: #FF4B4B; font-weight: bold; margin-bottom: 20px;}
         .stButton>button {width: 100%; border-radius: 10px; font-weight: bold; height: 3.2em; transition: 0.3s;}
+        
+        /* Card ราคา */
         .price-card {
             background-color: #ffffff !important; padding: 18px; border-radius: 12px;
             border-left: 6px solid #FF4B4B; margin-bottom: 12px;
@@ -20,23 +23,48 @@ st.markdown("""
         }
         .price-text { float: right; color: #FF4B4B; font-weight: bold; }
         
-        /* สไตล์ข้อมูลติดต่อสีดำ และ ลิงก์ GPS */
+        /* ข้อมูลติดต่อ */
         .contact-section-black { 
             background-color: #ffffff; padding: 30px; border-radius: 15px; text-align: center; 
             box-shadow: 0px 4px 15px rgba(0,0,0,0.1); border: 1px solid #eeeeee;
             color: #000000 !important;
         }
         .contact-section-black h3, .contact-section-black p { color: #000000 !important; margin: 8px 0; }
-        .map-link { 
-            color: #0000EE !important; 
-            text-decoration: underline; 
-            font-weight: bold; 
-            cursor: pointer;
-        }
+        .map-link { color: #0000EE !important; text-decoration: underline; font-weight: bold; cursor: pointer; }
+
+        /* ---------------------------------------------------- */
+        /* --- Chat สไตล์ Messenger --- */
+        /* ---------------------------------------------------- */
         
-        .chat-msg { padding: 12px; border-radius: 15px; margin-bottom: 10px; max-width: 85%; }
-        .user-msg { background-color: #E3F2FD; margin-left: auto; text-align: right; color: #000; }
-        .admin-msg { background-color: #F5F5F5; margin-right: auto; text-align: left; color: #000; }
+        /* ข้อความของผู้ส่ง (User - ฝั่งขวา สีฟ้า) */
+        [data-testid="stChatMessage"][data-testid^="stChatMessageUser"] {
+            flex-direction: row-reverse !important;
+            text-align: right !important;
+            background-color: #0084FF !important;
+            color: white !important;
+            border-radius: 15px 15px 2px 15px !important;
+            margin-left: auto !important;
+            width: fit-content !important;
+            max-width: 80% !important;
+            padding: 10px !important;
+        }
+
+        /* ข้อความของผู้รับ (Admin/Assistant - ฝั่งซ้าย สีเทา) */
+        [data-testid="stChatMessage"][data-testid^="stChatMessageAssistant"] {
+            background-color: #E4E6EB !important;
+            color: black !important;
+            border-radius: 15px 15px 15px 2px !important;
+            margin-right: auto !important;
+            width: fit-content !important;
+            max-width: 80% !important;
+            padding: 10px !important;
+        }
+
+        /* ปรับสีตัวอักษรข้างในให้ชัดเจน */
+        [data-testid="stChatMessage"] p { color: inherit !important; margin-bottom: 0px !important; }
+        
+        /* ซ่อนขอบและเงาเดิมของ Streamlit Chat */
+        [data-testid="stChatMessage"] { border: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -93,7 +121,7 @@ st.divider()
 
 # --- 3. PAGE LOGIC ---
 
-# 1. หน้าแรก (พร้อมข้อมูลติดต่อสีดำ และ ลิงก์ GPS)
+# 1. หน้าแรก
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (⚠️ หยุดทุกวันเสาร์)")
@@ -106,16 +134,15 @@ if st.session_state.page == "Home":
         target.markdown(f'<div class="price-card"><b>{name}</b><span class="price-text">{price}</span></div>', unsafe_allow_html=True)
 
     st.divider()
-    # ลิงก์ Google Maps ไปยังพิกัดที่แจ้ง
-    # (หมายเหตุ: ใช้ Search Query เพื่อความแม่นยำในการนำทางไปยังบ้านเลขที่)
-    google_maps_url = "https://www.google.com/maps/search/?api=1&query=222+ถนนเทศบาล+1+ตำบลบ่อยาง+อำเภอเมืองสงขลา+สงขลา+90000"
+    address = "222 ถนนเทศบาล 1 ตำบลบ่อยาง อำเภอเมืองสงขลา สงขลา 90000"
+    google_maps_url = f"https://www.google.com/maps/search/?api=1&query={address.replace(' ', '+')}"
     
     st.markdown(f"""
         <div class="contact-section-black">
             <h3>📞 ติดต่อเรา & พิกัดร้าน</h3>
             <p>📱 <b>เบอร์โทรศัพท์:</b> 081-222-2222</p>
             <p>💬 <b>LINE ID:</b> @222salon</p>
-            <p>📍 <b>พิกัด:</b> <a class="map-link" href="{google_maps_url}" target="_blank">222 ถนนเทศบาล 1 ตำบลบ่อยาง อำเภอเมืองสงขลา สงขลา 90000</a></p>
+            <p>📍 <b>พิกัด:</b> <a class="map-link" href="{google_maps_url}" target="_blank">{address}</a></p>
             <p style="font-size: 0.85em; color: #555555 !important;">(คลิกที่พิกัดด้านบนเพื่อเปิด GPS นำทาง | จอดรถได้ที่หน้าร้านครับ)</p>
         </div>
     """, unsafe_allow_html=True)
@@ -164,7 +191,7 @@ elif st.session_state.page == "Login":
                 navigate("Booking")
             else: st.error("❌ เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง")
 
-# 5. หน้าจองคิว / ประวัติ / แชท (สำหรับลูกค้า)
+# 5. หน้าจองคิว / แชท (สำหรับลูกค้า)
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติคิวของฉัน", "💬 แชทสอบถาม"])
     
@@ -202,22 +229,27 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
 
     with t3:
         st.subheader("💬 พูดคุยกับร้าน")
+        chat_box = st.container(height=400)
         df_c = get_data("Chats")
-        box = st.container(height=300)
-        if not df_c.empty:
-            my_m = df_c[df_c['username'] == st.session_state.username]
-            for _, m in my_m.iterrows():
-                cls = "user-msg" if m['sender'] == "user" else "admin-msg"
-                box.markdown(f'<div class="chat-msg {cls}">{m["msg"]}</div>', unsafe_allow_html=True)
-        with st.form("chat_f", clear_on_submit=True):
-            txt = st.text_input("พิมพ์ข้อความ...")
-            if st.form_submit_button("ส่ง") and txt:
-                new_m = pd.DataFrame([{"username": st.session_state.username, "sender": "user", "msg": txt, "time": datetime.now().strftime("%H:%M")}])
-                conn.update(worksheet="Chats", data=pd.concat([df_c, new_m], ignore_index=True)); st.rerun()
+        
+        with chat_box:
+            if not df_c.empty:
+                my_m = df_c[df_c['username'] == st.session_state.username]
+                for _, m in my_m.iterrows():
+                    if m['sender'] == "user":
+                        with st.chat_message("user"): st.markdown(m["msg"])
+                    else:
+                        with st.chat_message("assistant"): st.markdown(m["msg"])
+
+        if prompt := st.chat_input("พิมพ์ข้อความ..."):
+            new_m = pd.DataFrame([{"username": st.session_state.username, "sender": "user", "msg": prompt, "time": datetime.now().strftime("%H:%M")}])
+            conn.update(worksheet="Chats", data=pd.concat([df_c, new_m], ignore_index=True))
+            st.rerun()
 
 # 6. หน้าแอดมิน
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
     at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 แชทลูกค้า"])
+    
     with at2:
         df_adm = get_data("Bookings")
         active = df_adm[df_adm['status'] == "รอรับบริการ"] if not df_adm.empty else pd.DataFrame()
@@ -232,16 +264,25 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                 if col3.button("❌ ยกเลิก", key=f"no{r['id']}"):
                     df_adm.loc[df_adm['id'] == r['id'], 'status'] = "ยกเลิกโดยร้าน"
                     conn.update(worksheet="Bookings", data=df_adm); st.rerun()
+                    
     with at3:
+        st.subheader("📩 แชทสอบถามจากลูกค้า")
         df_ch = get_data("Chats")
         if not df_ch.empty:
             for u in df_ch['username'].unique():
-                with st.expander(f"แชทจากคุณ: {u}"):
-                    for _, m in df_ch[df_ch['username'] == u].iterrows():
-                        style = "user-msg" if m['sender'] == "user" else "admin-msg"
-                        st.markdown(f'<div class="chat-msg {style}">{m["msg"]}</div>', unsafe_allow_html=True)
-                    with st.form(f"rep_{u}"):
+                with st.expander(f"👤 แชทจากคุณ: {u}", expanded=True):
+                    inner_chat = st.container(height=300)
+                    user_msgs = df_ch[df_ch['username'] == u]
+                    with inner_chat:
+                        for _, m in user_msgs.iterrows():
+                            if m['sender'] == "user":
+                                with st.chat_message("assistant"): st.markdown(m["msg"])
+                            else:
+                                with st.chat_message("user"): st.markdown(m["msg"])
+                    
+                    with st.form(f"rep_{u}", clear_on_submit=True):
                         reply = st.text_input("ตอบกลับ...")
-                        if st.form_submit_button("ส่ง"):
+                        if st.form_submit_button("ส่ง") and reply:
                             new_r = pd.DataFrame([{"username": u, "sender": "admin", "msg": reply, "time": datetime.now().strftime("%H:%M")}])
-                            conn.update(worksheet="Chats", data=pd.concat([df_ch, new_r], ignore_index=True)); st.rerun()
+                            conn.update(worksheet="Chats", data=pd.concat([df_ch, new_r], ignore_index=True))
+                            st.rerun()
