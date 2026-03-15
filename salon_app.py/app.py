@@ -55,15 +55,41 @@ def get_data(sheet_name):
     except Exception as e:
         return pd.DataFrame()
 
+# --- 2.5 NOTIFICATION ENGINE (เพิ่มใหม่) ---
+def check_updates():
+    # ตรวจสอบจำนวนแถวปัจจุบันเปรียบเทียบกับค่าที่บันทึกไว้ใน session
+    df_b = get_data("Bookings")
+    df_c = get_data("Chats")
+    
+    curr_b = len(df_b)
+    curr_c = len(df_c)
+
+    # ครั้งแรกที่รัน ให้บันทึกค่าปัจจุบันไว้ก่อน
+    if 'last_b_count' not in st.session_state: st.session_state.last_b_count = curr_b
+    if 'last_c_count' not in st.session_state: st.session_state.last_c_count = curr_c
+
+    # เช็คว่ามีอะไรใหม่ไหม
+    st.session_state.has_new_booking = curr_b > st.session_state.last_b_count
+    st.session_state.has_new_chat = curr_c > st.session_state.last_c_count
+
+check_updates()
+
 # --- 3. NAVIGATION & SESSION ---
 if 'page' not in st.session_state: st.session_state.page = "Home"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
 def navigate(p):
+    # เมื่อกดเปลี่ยนหน้า ให้ถือว่ารับรู้ข้อมูลใหม่แล้ว (ลบจุดแดง)
+    if p == "Admin": 
+        st.session_state.last_b_count = len(get_data("Bookings"))
+        st.session_state.last_c_count = len(get_data("Chats"))
+    if p == "Booking":
+        st.session_state.last_c_count = len(get_data("Chats"))
+        
     st.session_state.page = p
     st.rerun()
 
-# ระบบ Autorefresh (ทำงานเฉพาะหน้าแอดมิน คิววันนี้ และหน้าจองคิว)
+# ระบบ Autorefresh
 if st.session_state.page in ["ViewQueues", "Admin", "Booking"]:
     st_autorefresh(interval=30000, key="datarefresh")
 
@@ -83,10 +109,17 @@ else:
     role = st.session_state.get('user_role')
     if role == 'admin':
         with m_cols[2]: 
-            if st.button("📊 จัดการร้าน"): navigate("Admin")
+            # ถ้ามีคิวใหม่หรือแชทใหม่ ให้แสดงจุดแดง
+            btn_label = "📊 จัดการร้าน"
+            if st.session_state.get('has_new_booking') or st.session_state.get('has_new_chat'):
+                btn_label = "📊 จัดการร้าน 🔴"
+            if st.button(btn_label): navigate("Admin")
     else:
         with m_cols[2]: 
-            if st.button("✂️ จองคิว"): navigate("Booking")
+            btn_label = "✂️ จองคิว"
+            if st.session_state.get('has_new_chat'): # แจ้งเตือนลูกค้าถ้าแอดมินตอบ
+                btn_label = "✂️ จองคิว 🔴"
+            if st.button(btn_label): navigate("Booking")
     with m_cols[4]:
         if st.button("🚪 ออกจากระบบ"):
             st.session_state.clear()
@@ -204,6 +237,8 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
                         conn.update(worksheet="Bookings", data=df_b); st.rerun()
 
     with t3:
+        # เมื่อเข้าหน้าแชท รีเซ็ตแจ้งเตือน
+        st.session_state.last_c_count = len(get_data("Chats"))
         df_c = get_data("Chats")
         with st.container(height=300):
             if not df_c.empty:
@@ -215,6 +250,10 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
 
 # 5. หน้าแอดมิน
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
+    # เมื่อเข้าหน้าแอดมิน รีเซ็ตแจ้งเตือนทั้งหมด
+    st.session_state.last_b_count = len(get_data("Bookings"))
+    st.session_state.last_c_count = len(get_data("Chats"))
+    
     at1, at2, at3 = st.tabs(["📊 สรุปยอด", "📅 จัดการคิว", "📩 แชทลูกค้า"])
     df_adm = get_data("Bookings")
     
