@@ -41,7 +41,7 @@ def get_data(sheet_name):
         "Chats": ["username", "sender", "msg", "time"]
     }
     try:
-        # ใส่ ttl=10 เพื่อลดการยิง API ถี่เกินไป (Rate Limit)
+        # ใช้ ttl=10 เพื่อป้องกันการยิง API ถี่เกินไปจนโดน Google Block
         df = conn.read(worksheet=sheet_name, ttl=10).astype(str)
         if df is None or df.empty:
             return pd.DataFrame(columns=default_cols.get(sheet_name, []))
@@ -52,25 +52,24 @@ def get_data(sheet_name):
             if 'phone' in col or 'username' in col:
                 df[col] = df[col].apply(lambda x: '0' + x if (len(x) == 9 and x.isdigit()) else x)
         return df
-    except Exception as e:
-        st.error(f"การดึงข้อมูลขัดข้อง: {sheet_name}")
+    except Exception:
         return pd.DataFrame(columns=default_cols.get(sheet_name, []))
 
 def safe_update(sheet_name, df):
-    """ฟังก์ชันอัปเดตข้อมูลแบบปลอดภัย พร้อมจัดการ Error"""
+    """ฟังก์ชันอัปเดตข้อมูลแบบปลอดภัยเพื่อเลี่ยง Error API"""
     try:
-        # ล้างค่า NaN และแปลงทุกอย่างเป็น String ก่อนส่งไป Google Sheets
         clean_df = df.fillna("").astype(str)
         conn.update(worksheet=sheet_name, data=clean_df)
         return True
     except Exception as e:
-        st.error(f"❌ ไม่สามารถบันทึกข้อมูลได้: โปรดตรวจสอบการแชร์สิทธิ์ใน Google Sheets")
-        st.info("ตรวจสอบว่าได้แชร์ไฟล์ให้ Service Account (อีเมลใน JSON) เป็น Editor แล้วหรือยัง")
+        st.error(f"❌ บันทึกไม่สำเร็จ: โปรดตรวจสอบการแชร์สิทธิ์ (Share) ไฟล์ Google Sheets")
         return False
 
 # --- 3. NAVIGATION & SESSION ---
 if 'page' not in st.session_state: st.session_state.page = "Home"
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+
+# เก็บจำนวนข้อมูลเพื่อทำระบบจุดแจ้งเตือน
 if 'last_booking_count' not in st.session_state: st.session_state.last_booking_count = 0
 if 'last_chat_count' not in st.session_state: st.session_state.last_chat_count = 0
 
@@ -82,7 +81,7 @@ def navigate(p):
 if st.session_state.page in ["ViewQueues", "Admin", "Booking"]:
     st_autorefresh(interval=60000, key="datarefresh")
 
-# --- 4. PRE-FETCH FOR NOTIFICATIONS ---
+# --- 4. NOTIFICATION CHECK ---
 df_bookings_all = get_data("Bookings")
 df_chats_all = get_data("Chats")
 
@@ -119,19 +118,34 @@ st.divider()
 
 # --- 6. PAGES ---
 
-# --- HOME ---
+# --- 6.1 HOME (หน้าแรก) ---
 if st.session_state.page == "Home":
     st.image("https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000")
     st.info("⏰ ร้านเปิดบริการ 09:30 - 19:30 น. (⚠️ หยุดทุกวันเสาร์)")
-    # (ส่วนบริการและราคาเหมือนเดิม...)
+    
     st.subheader("📋 บริการและราคา")
     services = {"✂️ ตัดผมชาย": "150-350 บ.", "💇‍♀️ ตัดผมหญิง": "350-800 บ.", "🚿 สระ-ไดร์": "200-450 บ.", "🎨 ทำสีผม": "1,500 บ.+", "✨ ยืด/ดัด": "1,000 บ.+", "🌿 ทรีทเม้นท์": "500 บ.+" }
     p1, p2 = st.columns(2)
     for i, (name, price) in enumerate(services.items()):
         target = p1 if i % 2 == 0 else p2
         target.markdown(f'<div class="price-card"><b>{name}</b><span style="float:right; color:#FF4B4B;">{price}</span></div>', unsafe_allow_html=True)
+    
+    # ส่วนที่เพิ่มกลับมา: ติดต่อเรา & GPS
+    st.markdown("""
+        <div class="contact-section">
+            <h3 style="color: #FF4B4B;">📞 ติดต่อเรา</h3>
+            <p style="font-size: 1.1em;"><b>🔵 Facebook:</b> 222Salon Songkhla</p>
+            <p style="font-size: 1.1em;"><b>📱 โทร:</b> 082-222-2222</p>
+            <p style="font-size: 1.1em;"><b>📍 ที่อยู่:</b> 222 ถนนเทศบาล 1 ตำบลบ่อยาง อำเภอเมืองสงขลา</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.write("")
+    mc1, mc2, mc3 = st.columns([1, 2, 1])
+    with mc2:
+        st.link_button("📍 นำทางด้วย Google Maps (GPS)", "https://maps.google.com", use_container_width=True)
 
-# --- REGISTER ---
+# --- 6.2 REGISTER ---
 elif st.session_state.page == "Register":
     st.subheader("📝 สมัครสมาชิกใหม่")
     with st.form("reg_form"):
@@ -148,7 +162,7 @@ elif st.session_state.page == "Register":
                 if safe_update("Users", pd.concat([df_u, new_u], ignore_index=True)):
                     st.success("✅ สมัครสำเร็จ!"); time.sleep(1); navigate("Login")
 
-# --- LOGIN ---
+# --- 6.3 LOGIN ---
 elif st.session_state.page == "Login":
     st.subheader("🔑 เข้าสู่ระบบ")
     u_in, p_in = st.text_input("เบอร์โทรศัพท์"), st.text_input("รหัสผ่าน", type="password")
@@ -166,7 +180,7 @@ elif st.session_state.page == "Login":
                 navigate("Booking" if user.iloc[0]['role'] == 'user' else "Admin")
             else: st.error("❌ ข้อมูลไม่ถูกต้อง")
 
-# --- BOOKING & CHAT ---
+# --- 6.4 BOOKING & CHAT ---
 elif st.session_state.page == "Booking" and st.session_state.logged_in:
     t1, t2, t3 = st.tabs(["🆕 จองคิว", "📋 ประวัติการจอง", "💬 แชทสอบถาม"])
     with t1:
@@ -203,21 +217,18 @@ elif st.session_state.page == "Booking" and st.session_state.logged_in:
             new_m = pd.DataFrame([{"username": st.session_state.username, "sender": "user", "msg": p, "time": datetime.now().strftime("%H:%M")}])
             if safe_update("Chats", pd.concat([df_chats_all, new_m], ignore_index=True)): st.rerun()
 
-# --- ADMIN PANEL ---
+# --- 6.5 ADMIN PANEL ---
 elif st.session_state.page == "Admin" and st.session_state.logged_in:
-    tab1_label = "📊 สถิติรายได้"
-    tab2_label = "📅 จัดการคิว" + (" 🔴" if has_new_booking else "")
-    tab3_label = "📩 แชทลูกค้า" + (" 🔴" if has_new_chat else "")
-    at1, at2, at3 = st.tabs([tab1_label, tab2_label, tab3_label])
+    at1, at2, at3 = st.tabs(["📊 สถิติ", "📅 จัดการคิว" + (" 🔴" if has_new_booking else ""), "📩 แชท" + (" 🔴" if has_new_chat else "")])
     
     with at1:
         done = df_bookings_all[df_bookings_all['status'] == "เสร็จสิ้น"].copy()
         done['price'] = pd.to_numeric(done['price'], errors='coerce').fillna(0)
-        st.metric("รายได้รวมทั้งหมด", f"{done['price'].sum():,.0f} บาท")
+        st.metric("รายได้รวม", f"{done['price'].sum():,.0f} บาท")
         st.dataframe(done, use_container_width=True)
 
     with at2:
-        st.session_state.last_booking_count = current_b_count # อ่านแล้ว
+        st.session_state.last_booking_count = current_b_count # ล้างแจ้งเตือน
         active = df_bookings_all[df_bookings_all['status'] == "รอรับบริการ"]
         for _, r in active.iterrows():
             with st.container(border=True):
@@ -232,7 +243,7 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                     safe_update("Bookings", df_bookings_all); st.rerun()
 
     with at3:
-        st.session_state.last_chat_count = current_c_count # อ่านแล้ว
+        st.session_state.last_chat_count = current_c_count # ล้างแจ้งเตือน
         for u in df_chats_all['username'].unique():
             with st.expander(f"📩 ข้อความจาก: {u}"):
                 for _, m in df_chats_all[df_chats_all['username'] == u].iterrows():
@@ -243,7 +254,7 @@ elif st.session_state.page == "Admin" and st.session_state.logged_in:
                         new_r = pd.DataFrame([{"username": u, "sender": "admin", "msg": rep, "time": datetime.now().strftime("%H:%M")}])
                         if safe_update("Chats", pd.concat([df_chats_all, new_r], ignore_index=True)): st.rerun()
 
-# --- VIEW TODAY'S QUEUES ---
+# --- 6.6 VIEW QUEUES ---
 elif st.session_state.page == "ViewQueues":
     st.subheader("📅 รายการคิวรอรับบริการวันนี้")
     today = datetime.now().strftime("%Y-%m-%d")
