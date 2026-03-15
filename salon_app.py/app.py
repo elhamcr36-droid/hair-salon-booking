@@ -15,6 +15,7 @@ st.set_page_config(
 # ---------------- STYLE ----------------
 st.markdown("""
 <style>
+
 [data-testid="stSidebar"] {display:none;}
 
 .main-header{
@@ -32,12 +33,17 @@ height:3.2em;
 }
 
 .price-card{
-background:#fff;
+background:#ffffff;
 padding:18px;
 border-radius:12px;
 border-left:6px solid #FF4B4B;
 margin-bottom:12px;
 box-shadow:2px 4px 12px rgba(0,0,0,0.08);
+color:#000000 !important;
+}
+
+.price-card b{
+color:#000000 !important;
 }
 
 .price-text{
@@ -47,13 +53,14 @@ font-weight:bold;
 }
 
 .contact-section{
-background:#fff;
+background:#ffffff;
 padding:30px;
 border-radius:15px;
 text-align:center;
-box-shadow:0 4px 15px rgba(0,0,0,0.1);
-border:1px solid #eee;
+box-shadow:0px 4px 15px rgba(0,0,0,0.1);
+border:1px solid #eeeeee;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -74,7 +81,6 @@ def get_data(sheet):
         df.columns = [str(c).strip().lower() for c in df.columns]
 
         for col in df.columns:
-
             df[col] = df[col].astype(str).str.strip().replace("nan","")
 
         return df
@@ -91,7 +97,6 @@ def get_new_msg_count():
         df['admin_reply'] = ""
 
     if not df.empty:
-
         unreplied = df[df['admin_reply']==""]
 
         return len(unreplied)
@@ -112,7 +117,7 @@ def navigate(p):
     st.rerun()
 
 # ---------------- MENU ----------------
-st.markdown("<h1 class='main-header'>✂️ 222-Salon</h1>",unsafe_allow_html=True)
+st.markdown("<h1 class='main-header'>✂️ 222-Salon</h1>", unsafe_allow_html=True)
 
 m_cols = st.columns(5)
 
@@ -196,6 +201,7 @@ if st.session_state.page=="Home":
 
     st.markdown(f"""
     <div class="contact-section">
+
     <h3 style="color:#FF4B4B;">📞 ติดต่อเรา</h3>
 
     <p>📱 081-222-2222</p>
@@ -206,6 +212,7 @@ if st.session_state.page=="Home":
     style="background:#FF4B4B;color:white;padding:12px 30px;border-radius:10px;text-decoration:none;font-weight:bold;">
     📍 ดูพิกัดร้านใน Google Maps
     </a>
+
     </div>
     """,unsafe_allow_html=True)
 
@@ -319,84 +326,3 @@ elif st.session_state.page=="Login":
             else:
 
                 st.error("ข้อมูลไม่ถูกต้อง")
-
-# ---------------- BOOKING ----------------
-elif st.session_state.page=="Booking":
-
-    t1,t2,t3=st.tabs(["จองคิว","ประวัติ","แชท"])
-
-    with t1:
-
-        with st.form("book"):
-
-            d=st.date_input("วันที่")
-
-            t=st.selectbox("เวลา",
-            ["09:30","10:30","11:30","13:00","14:00","15:00","16:00","17:00","18:00"])
-
-            s=st.selectbox("บริการ",
-            ["ตัดผมชาย","ตัดผมหญิง","สระไดร์","ทำสีผม","ยืดดัด","ทรีทเม้นท์"])
-
-            if st.form_submit_button("จอง"):
-
-                if d.weekday()==5:
-
-                    st.error("ร้านหยุดวันเสาร์")
-
-                else:
-
-                    df=get_data("Bookings")
-
-                    new=pd.DataFrame([{
-                    "id":str(uuid.uuid4())[:8],
-                    "username":st.session_state.username,
-                    "fullname":st.session_state.fullname,
-                    "date":str(d),
-                    "time":t,
-                    "service":s,
-                    "status":"รอรับบริการ",
-                    "price":"0"
-                    }])
-
-                    conn.update(
-                    worksheet="Bookings",
-                    data=pd.concat([df,new],ignore_index=True))
-
-                    st.success("จองสำเร็จ")
-
-# ---------------- ADMIN ----------------
-elif st.session_state.page=="Admin":
-
-    tab1,tab2,tab3=st.tabs(["รายได้","จัดการคิว","แชท"])
-
-    with tab1:
-
-        df=get_data("Bookings")
-
-        if not df.empty:
-
-            df['price']=pd.to_numeric(df['price'],errors='coerce').fillna(0)
-
-            total=df[df['status']=="เสร็จสิ้น"]['price'].sum()
-
-            st.metric("รายได้รวม",f"{total:,.0f} บาท")
-
-    with tab2:
-
-        df=get_data("Bookings")
-
-        if not df.empty:
-
-            q=df[df['status']=="รอรับบริการ"]
-
-            for i,row in q.iterrows():
-
-                st.write(row['fullname'],row['date'],row['time'])
-
-                if st.button("เสร็จสิ้น",key=row['id']):
-
-                    df.loc[df['id']==row['id'],'status']="เสร็จสิ้น"
-
-                    conn.update(worksheet="Bookings",data=df)
-
-                    st.rerun()
